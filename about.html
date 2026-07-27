@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>О проекте — Истории Веры</title>
+<meta name="description" content="О проекте «Истории Веры» — бесплатная интерактивная игра из 50 реальных христианских свидетельств. Как связаться с нами.">
+<meta property="og:title" content="О проекте — Истории Веры">
+<meta property="og:description" content="Кто и зачем сделал «Истории Веры», как связаться.">
+<meta property="og:url" content="https://faithchoice.net/about.html">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://faithchoice.net/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>
+  * { box-sizing: border-box; }
+  :root { --accent: #34c9a3; --accent2: #8b6cf0; }
+  body {
+    margin: 0; padding: 2rem 1rem;
+    background: #10171c; color: #e5ece8;
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.6;
+    display: flex; justify-content: center;
+    position: relative;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; opacity: 0.22;
+    background:
+      radial-gradient(circle at 20% 20%, var(--accent), transparent 55%),
+      radial-gradient(circle at 80% 80%, var(--accent2), transparent 55%);
+    background-size: 140% 140%;
+  }
+  main { width: 100%; max-width: 640px; }
+  h1 { font-size: 1.4rem; font-weight: normal; text-align: center; color: var(--accent); margin-bottom: 1.5rem; }
+  h2 { font-size: 1.05rem; font-weight: normal; color: var(--accent); margin: 1.75rem 0 0.5rem; }
+  p { margin: 0 0 0.9rem; color: #cfcdc9; }
+  a { color: var(--accent); }
+  .card {
+    background: #1a232a; border: 1px solid #2c3d45; border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 1.1rem 1.3rem; margin-bottom: 1.25rem;
+  }
+  .back {
+    display: inline-block; margin-top: 1.5rem; color: #8fa89d; text-decoration: none;
+    border: 1px solid #2c3d45; border-radius: 6px; padding: 0.6rem 1rem; font-size: 0.9rem;
+  }
+  .back:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>О проекте</h1>
+
+  <div class="card">
+    <p><strong>«Истории Веры»</strong> — бесплатная интерактивная игра из 50 реальных, задокументированных
+    христианских свидетельств. Каждая история рассказана как путь с развилками: вы сами принимаете решения на
+    ключевых поворотах и видите, куда ведёт светлый путь, а куда — тёмный.</p>
+  </div>
+
+  <h2>Почему это существует</h2>
+  <p>Проект делает небольшая команда верующих. Мы старались, чтобы за каждой историей стоял настоящий, реальный
+  человек и его реальный путь — не выдуманный сюжет ради драмы. Там, где это оказалось возможным, истории
+  опираются на задокументированные свидетельства конкретных людей.</p>
+  <p>Игра полностью бесплатна и без регистрации — сознательно, без платного доступа: тема, которой посвящена
+  игра, важнее, чем плата за вход.</p>
+
+  <h2>Связаться с нами</h2>
+  <p>Если вы представляете церковь, служение или организацию и хотите обсудить сотрудничество, поделиться
+  замечанием об ошибке в истории или просто написать нам — пишите на
+  <a href="mailto:hello@faithchoice.net">hello@faithchoice.net</a>.</p>
+
+  <p style="font-size: 0.85rem;"><a href="privacy.html">Политика конфиденциальности</a></p>
+
+  <a class="back" href="index.html">← Вернуться к игре</a>
+</main>
+</body>
+</html>
