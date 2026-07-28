@@ -10,3 +10,16 @@ tts-audio/
 # Локальные служебные состояния инструментов
 .netlify/
 .claude/
+
+# Android (Capacitor) — сборочные артефакты и локальные кэши, пересоздаются `npx cap sync`/gradlew
+android/build/
+android/app/build/
+android/.gradle/
+android/app/.cxx/
+android/local.properties
+android/captures/
+*.apk
+
+# iOS (Capacitor), если/когда появится
+ios/App/build/
+ios/App/Pods/

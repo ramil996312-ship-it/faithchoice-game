@@ -1,16 +1,43 @@
 // Отрисовка UI поверх engine.js (Story) и content-<lang>.js (контент). Чистый DOM, без фреймворков.
 
 const FAITH_RANGE = 30; // ponytail: под текущий разброс effects (±10..±15 на 2 выбора), для нормализации полоски
+// Баннер с просьбой поддержать проект (после каждой 10-й пройденной истории) — текст/логика готовы,
+// но выключены, пока не готова сама кнопка доната (ждёт открытия ИП, см. память проекта). Включить —
+// поставить true и вписать реальную ссылку в DONATE_URL.
+const DONATE_BANNER_ENABLED = false;
+const DONATE_URL = '#';
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
+// /var/www/faithchoice.net/audio/<lang>/<storyKey>/<sceneId>.mp3 — предзаписанная озвучка (Google Cloud TTS).
+// Внутри Capacitor-приложения страница грузится из локального бандла (file://-подобная схема), а не с
+// сайта — относительный путь 'audio' там ни на что не сослался бы. 500 МБ файлов сознательно НЕ зашиты
+// в приложение (раздули бы установку в разы) — вместо этого внутри приложения звук стримится с живого
+// сайта по полному адресу; на самом сайте (`window.Capacitor` отсутствует) путь остаётся относительным,
+// как раньше.
+const AUDIO_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+  ? 'https://faithchoice.net/audio' : 'audio';
 
 let story = null;
 let currentKey = null; // ключ текущего персонажа — нужен, чтобы отметить историю пройденной по достижении финала
 let totalSteps = 5; // пересчитывается под конкретную историю в startStory()
 let soundOn = localStorage.getItem('soundOn') !== '0';
 let audioCtx = null;
-let voice = null;
-let lang = LANGS.includes(localStorage.getItem('lang')) ? localStorage.getItem('lang') : 'ru';
+let currentAudio = null; // <audio>, которым сейчас управляют пауза/мьют — ссылка на активно звучащую сцену
+
+// Для новых посетителей без сохранённого выбора языка — угадываем по языку браузера, а не жёстко
+// показываем один и тот же язык всем подряд. Домен международный (faithchoice.net), и часть аудитории
+// приходит из англоязычного аутрича — им не должно быть нужно искать кнопку переключения языка.
+// navigator.languages (если есть) даёт список по убыванию предпочтения — берём первый, что у нас есть.
+// Если ни один из 5 языков не совпал — откатываемся на английский (не русский), он международный.
+function detectBrowserLang() {
+  const candidates = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+  for (const c of candidates) {
+    const prefix = c.toLowerCase().slice(0, 2);
+    if (LANGS.includes(prefix)) return prefix;
+  }
+  return 'en';
+}
+let lang = LANGS.includes(localStorage.getItem('lang')) ? localStorage.getItem('lang') : detectBrowserLang();
 
 const ageGateEl = document.getElementById('ageGate');
 const menuEl = document.getElementById('menu');
@@ -49,81 +76,13 @@ function markCompleted(key) {
 
 exitBtn.addEventListener('click', backToMenu);
 
-// --- Звук: голос (Web Speech API), с откатом на синтезированный "стрёкот" (Web Audio API) ---
-// Ничего не скачивается и не записывается — оба звука генерируются кодом в браузере.
-
-// Из голосов, подходящих под язык, выбираем не первый попавшийся, а на вид самый качественный —
-// на телефонах обычно сразу несколько голосов на один язык, и без этой сортировки код мог взять
-// старый "роботизированный" локальный голос вместо куда более естественного, который уже стоит
-// на устройстве. Облачные голоса (localService: false) звучат живее локальных почти всегда — есть
-// риск, что такой голос "подвиснет" в сети, но это уже отдельно подстраховано вотчдогом в
-// speakAndReveal (см. ниже), который откатится на стрёкот, если голос не откликнется за 1.8с.
-function voiceQualityScore(v) {
-  const name = v.name.toLowerCase();
-  let score = 0;
-  if (/natural|enhanced|premium|neural|wavenet|studio|plus/.test(name)) score += 3;
-  if (/google/.test(name)) score += 2;
-  if (!v.localService) score += 1;
-  if (/compact|espeak|robot/.test(name)) score -= 3;
-  return score;
-}
-
-function pickVoice() {
-  // Голос должен реально понимать текущий язык — иначе он либо молчит, либо читает
-  // текст чужим языком нечитаемо. Нет подходящего голоса — используем стрёкот вместо озвучки.
-  const voices = speechSynthesis.getVoices();
-  const candidates = voices.filter(v => v.lang.toLowerCase().startsWith(lang));
-  candidates.sort((a, b) => voiceQualityScore(b) - voiceQualityScore(a));
-  voice = candidates[0] || null;
-}
-if ('speechSynthesis' in window) {
-  pickVoice();
-  // Список голосов у браузера иногда догружается асинхронно уже после открытия страницы, и это событие
-  // может сработать посреди уже идущей истории — если в этот момент переподставить voice, звучание сменится
-  // (вплоть до смены пола голоса) прямо на середине истории. Поэтому пока история идёт (story не null),
-  // просто не трогаем выбранный голос — переподберём заново, когда пользователь вернётся в меню.
-  speechSynthesis.onvoiceschanged = () => { if (!story) pickVoice(); };
-}
+// --- Звук: предзаписанная озвучка (mp3, Google Cloud TTS), с откатом на печать со "стрёкотом"
+// (Web Audio API), если файл не загрузился — например, сцены нет в audio/ или сеть отвалилась.
 
 function ensureAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
-}
-
-// Первый speak() в сессии браузера у части голосов (особенно сетевые/Natural) долго "запрягается" —
-// сторожевой таймер в speakAndReveal (1.8с) не успевает дождаться и откатывается на печать со стрёкотом
-// именно для первой реплики. Прогреваем движок тихой фразой заранее, пока ещё не нужен реальный текст.
-// Важно: возвращаем промис и реально ДОЖИДАЕМСЯ его в startStory() — раньше прогрев запускался и тут же,
-// в следующей строке кода, стирался вызовом speechSynthesis.cancel() из speakAndReveal() для настоящей
-// первой реплики (тот cancel() нужен, чтобы обрывать озвучку ПРЕДЫДУЩЕЙ сцены, но заодно сносил и ещё не
-// доигравший прогрев) — из-за этой гонки прогрев по факту никогда не успевал сработать.
-let speechWarmed = false;
-function warmUpSpeech() {
-  if (speechWarmed || !('speechSynthesis' in window) || !soundOn) return Promise.resolve();
-  speechWarmed = true;
-  return new Promise(resolve => {
-    const warm = new SpeechSynthesisUtterance(' ');
-    warm.volume = 0;
-    if (voice) warm.voice = voice; // прогреваем именно тот голос, который реально будет читать историю
-    let done = false;
-    const finish = () => { if (done) return; done = true; resolve(); };
-    // Если движок не откликнулся за отведённое время, беззвучная прогревочная фраза может остаться
-    // висеть в очереди браузера недоигранной, — и тогда настоящая первая фраза истории просто встаёт
-    // в очередь ЗА ней, а не начинает звучать сразу. cancel() здесь принудительно очищает очередь
-    // перед тем как отдать управление реальной истории, чтобы за прогревом не осталось "хвоста".
-    // Небольшая пауза после cancel() — тот же браузер, которому не хватало времени сбросить
-    // движок между cancel() и speak() в speakAndReveal (см. комментарий там про "проглоченные"
-    // первые слова), может повторить ту же гонку здесь, если продолжить сразу же без зазора.
-    const finishAndClear = () => { speechSynthesis.cancel(); setTimeout(finish, 50); };
-    warm.onend = finishAndClear;
-    warm.onerror = finishAndClear;
-    // 400мс было мало для медленных сетевых голосов — прогрев сдавался раньше, чем движок
-    // успевал реально проснуться, и самая первая фраза истории всё равно уходила на печать.
-    // Это разовая задержка на всю сессию браузера, не на каждую сцену, — не жалко подождать дольше.
-    setTimeout(finishAndClear, 3000);
-    speechSynthesis.speak(warm);
-  });
 }
 
 function playBlip() {
@@ -224,17 +183,20 @@ themeBtn.addEventListener('click', () => {
 applyTheme();
 
 function updateMuteBtn() { muteBtn.textContent = soundOn ? '🔊' : '🔇'; }
+// Мьют — это НЕ пауза: текст должен продолжать идти дальше без звука, а не замирать. Аудио продолжает
+// играть и синхронизировать проявление текста, просто беззвучно (audio.muted), поэтому тут достаточно
+// переключить флаг на уже играющем элементе — без остановки/перезапуска.
 muteBtn.addEventListener('click', () => {
   soundOn = !soundOn;
   localStorage.setItem('soundOn', soundOn ? '1' : '0');
-  if (!soundOn) speechSynthesis.cancel();
+  if (currentAudio) currentAudio.muted = !soundOn;
   updateMuteBtn();
 });
 updateMuteBtn();
 
-// Пауза — останавливает и голос (speechSynthesis.pause, нативно поддерживается браузером),
-// и печать-стрёкот (тик просто ничего не делает, пока стоит на паузе). Сбрасывается на каждой
-// новой сцене в renderCurrent() — пауза относится к текущей реплике, а не ко всей игре разом.
+// Пауза — останавливает и озвучку (audio.pause(), нативно и надёжно в HTML5 audio), и печать-стрёкот
+// (тик просто ничего не делает, пока стоит на паузе). Сбрасывается на каждой новой сцене в
+// renderCurrent() — пауза относится к текущей реплике, а не ко всей игре разом.
 let isPaused = false;
 // Иконка ⏸/▶ в углу слишком маленькая и легко теряется, особенно на телефоне — если пользователь случайно
 // поставил паузу одним касанием по ленте во время печати/озвучки, экран просто "замирает" без кнопки
@@ -245,11 +207,7 @@ function updatePauseBtn() {
 }
 pauseHintEl.addEventListener('click', () => { if (isPaused) togglePause(); });
 // Хук паузы для активно звучащей озвучки. speakAndReveal подставляет сюда pause/resume/abandon,
-// пока управляет конкретным SpeechSynthesisUtterance. НЕ используем speechSynthesis.pause()/resume()
-// напрямую — в части браузеров (особенно с сетевыми "естественными" голосами) речь после такой паузы
-// зависает и не возобновляется вовсе, из-за чего пользователь слышит тишину, а потом фолбэк-стрёкот
-// вместо голоса. Вместо этого при паузе честно останавливаем (cancel) текущую фразу и запоминаем,
-// докуда она была озвучена/показана, а при снятии паузы озвучиваем заново только оставшийся хвост текста.
+// пока управляет конкретным <audio> текущей сцены.
 let activeVoicePause = null;
 function togglePause() {
   isPaused = !isPaused;
@@ -287,8 +245,6 @@ function setLang(l) {
   if (l === lang) return;
   lang = l;
   localStorage.setItem('lang', lang);
-  speechWarmed = false; // новый язык — новый голос, его тоже нужно прогреть заново
-  pickVoice();
   renderLangSwitch();
   applyStaticText();
   renderMenu();
@@ -321,6 +277,26 @@ function pulseHeart(direction) {
   el.classList.add('heart-pulse');
 }
 
+// Клик по любому сердцу открывает библейский стих про соответствующий путь (Рим. 10:13 у света,
+// 1 Кор. 6:9-10 у тьмы) — сердца теперь настоящие <button>, не просто подпись. Один и тот же модальный
+// блок для обоих направлений, текст берётся из i18n (verseLight/verseDark), поэтому подхватывается
+// на всех 5 языках сам по себе, без отдельной логики на язык.
+const verseModalEl = document.getElementById('verseModal');
+const verseModalTextEl = document.getElementById('verseModalText');
+const verseModalBoxEl = document.querySelector('.verse-modal-box');
+function openVerseModal(direction) {
+  verseModalTextEl.textContent = t(direction === 'dark' ? 'verseDark' : 'verseLight');
+  verseModalBoxEl.classList.remove('verse-dark', 'verse-light');
+  verseModalBoxEl.classList.add(direction === 'dark' ? 'verse-dark' : 'verse-light');
+  verseModalEl.classList.remove('hidden');
+}
+function closeVerseModal() { verseModalEl.classList.add('hidden'); }
+faithLabelsEl.querySelector('.heart-dark').addEventListener('click', () => openVerseModal('dark'));
+faithLabelsEl.querySelector('.heart-light').addEventListener('click', () => openVerseModal('light'));
+document.getElementById('verseModalClose').addEventListener('click', closeVerseModal);
+document.getElementById('verseModalBackdrop').addEventListener('click', closeVerseModal);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeVerseModal(); });
+
 // Стрелка на полоске веры в момент выбора — стартует из центра и "летит" к тому сердцу, в чью
 // сторону сдвинулся выбор: красная к тьме, зелёная к свету (см. .faith-arrow в index.html).
 const faithArrowEl = document.getElementById('faithArrow');
@@ -342,17 +318,34 @@ function applyStaticText() {
   document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
 }
 
+// Ссылка на конкретную историю (?story=marat из кнопки "Поделиться") — чтобы можно было отправить
+// близкому человеку сразу нужную историю, а не общую ссылку на меню.
+function getSharedStoryKey() {
+  const key = new URLSearchParams(location.search).get('story');
+  return key && content().STORIES[key] ? key : null;
+}
+function enterApp() {
+  const sharedKey = getSharedStoryKey();
+  if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
+}
+
 // Предупреждение о теме контента (насилие/зависимости/суицид) — один раз на браузер, затем не показываем.
+// Исключение — прямая ссылка на конкретную историю (?story=, см. getSharedStoryKey): её всегда
+// показываем заново, даже если уже была принята раньше. Причины две: получатель ссылки видит
+// предупреждение свежим взглядом, не выбрав историю сам через меню; и, что технически обязательно —
+// это единственный клик пользователя перед стартом истории. Без него enterApp()/startStory() запускал
+// бы озвучку прямо при загрузке страницы без единого жеста пользователя, а браузеры блокируют
+// автозапуск звука без клика — audio.play() тихо падал в фолбэк на печать с кликами клавиатуры.
 function initAgeGate() {
-  if (localStorage.getItem('ageGateAccepted') === '1') {
+  if (localStorage.getItem('ageGateAccepted') === '1' && !getSharedStoryKey()) {
     ageGateEl.classList.add('hidden');
-    menuEl.classList.remove('hidden');
+    enterApp();
     return;
   }
   document.getElementById('btnAgeGateContinue').addEventListener('click', () => {
     localStorage.setItem('ageGateAccepted', '1');
     ageGateEl.classList.add('hidden');
-    menuEl.classList.remove('hidden');
+    enterApp();
   });
 }
 
@@ -385,168 +378,69 @@ function typeTextBlip(el, text, speed = 18, startIndex = 0) {
   });
 }
 
-// Озвучивает текст голосом браузера и проявляет его слово за словом синхронно с речью.
-// Клик по ленте — ставит/снимает паузу (не пропускает озвучку, см. togglePause выше).
-// Если голос за 1.8с не подал признаков жизни (частая история с сетевыми нейро-голосами
-// для менее ходовых языков — зависает без ошибки и без звука), бросаем его и уходим на
-// печать со стрёкотом, а не ждём молча неизвестно сколько.
-//
-// Пауза реализована через cancel() + повторный speak() оставшегося хвоста текста, а не через
-// native speechSynthesis.pause()/resume() — те в части браузеров ломают воспроизведение насовсем
-// (речь не возобновляется, слышно только тишину или неожиданно стартует стрёкот-фолбэк).
-function speakAndReveal(el, text) {
-  if (!soundOn || !('speechSynthesis' in window) || !voice) return typeTextBlip(el, text);
+// Проигрывает подряд предзаписанные mp3 нескольких сцен (см. renderCurrent — линейные сцены без
+// выбора склеены в один блок) и проявляет их общий текст синхронно через timeupdate. Пауза/резюм —
+// нативные audio.pause()/play(), мьют — audio.muted; никаких вотчдогов на зависание не нужно, в
+// отличие от speechSynthesis, файл либо грузится, либо сразу даёт error. Если файл не найден —
+// оставшийся текст (эта и все следующие сцены блока) молча "протикивает" печатью (typeTextBlip).
+function speakAndReveal(el, parts) {
   const myToken = revealToken;
+  const fullText = parts.map(p => p.text).join(' ');
+  el.textContent = '';
+
   return new Promise(resolve => {
-    // cancel() только если голос реально что-то читает/готовится читать — безусловный cancel() прямо
-    // перед speak() для новой сцены "сглатывал" первые слова: браузер не успевал сбросить движок до
-    // старта новой фразы. В норме к этому моменту прошлая фраза уже сама завершилась (onend/abandon).
-    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    el.textContent = '';
-    let done = false;
-    let watchdog = null;
-    let intentionalStop = false; // true, пока мы сами вызываем cancel() ради паузы — это не ошибка голоса
-
     const cleanupClick = () => feedEl.removeEventListener('click', onFeedClick);
-
     const finishAll = (finalText) => {
-      if (done) return;
-      done = true;
-      clearTimeout(watchdog);
-      cleanupClick();
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       activeVoicePause = null;
+      cleanupClick();
       if (myToken === revealToken) el.textContent = finalText;
-      speechSynthesis.cancel();
       resolve();
     };
-    const onFeedClick = () => handleFeedTap(() => finishAll(text));
+    const onFeedClick = () => handleFeedTap(() => finishAll(fullText));
+    feedEl.addEventListener('click', onFeedClick);
 
-    const fallbackToTyping = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(watchdog);
+    let partIdx = 0;
+    let prefix = ''; // текст уже доигранных сцен блока — общий отсчёт позиции в fullText
+
+    const fallbackFromHere = () => {
+      const shownLen = el.textContent.length; // сколько уже реально показано (могли быть на середине части)
       cleanupClick();
-      activeVoicePause = null;
-      speechSynthesis.cancel();
-      // cancel() из backToMenu() тоже приходит сюда через onerror — если история уже
-      // не актуальна (пользователь вышел), не запускаем стрёкот поверх меню.
       if (myToken !== revealToken) { resolve(); return; }
-      typeTextBlip(el, text, 18, el.textContent.length).then(resolve);
+      typeTextBlip(el, fullText, 18, shownLen).then(resolve);
     };
 
-    function speakFrom(offset) {
-      const remaining = text.slice(offset);
-      if (!remaining) { finishAll(text); return; }
-      let started = false;
-      let attemptId = 0; // отличает события свежей попытки от асинхронного "хвоста" отменённой
+    const playPart = () => {
+      if (partIdx >= parts.length) { finishAll(fullText); return; }
+      const part = parts[partIdx];
+      const audio = new Audio(`${AUDIO_BASE}/${lang}/${currentKey}/${part.id}.mp3`);
+      audio.muted = !soundOn;
+      currentAudio = audio;
 
-      // Известная особенность движка речи в Chrome/Edge: изредка новая фраза молча "зависает" —
-      // не запускается и не выдаёт ошибку. Один retry (cancel + свежий Utterance) почти всегда
-      // решает эту ситуацию сам; печать со стрёкотом остаётся крайним случаем, если и он не помог.
-      // Отдельная опасность — фраза стартует нормально, но замолкает где-то посреди себя и больше
-      // никогда не зовёт ни onend, ни onerror: без второго таймера (armStallWatchdog) сцена осталась
-      // бы висеть навсегда — кнопка "Далее" просто не появлялась бы, и пробел нажимать было не на что.
-      //
-      // В Safari/iOS у onboundary давняя особенность WebKit — оно может вообще ни разу не сработать
-      // после onstart для целой фразы. Если таймер зависания сбрасывается только по onboundary, это
-      // на iPhone ошибочно принимало нормально звучащий длинный текст за зависший уже через 4 секунды
-      // и обрывало голос на печать посреди фразы. Поэтому бюджет времени считаем не фиксированным,
-      // а от длины оставшегося текста (по той же модели ~13 симв/сек, что и в тайминге историй),
-      // с трёхкратным запасом, — чтобы длинная фраза без единого onboundary всё равно успела дочитаться.
-      const stallBudgetMs = Math.max(4000, (remaining.length / 13) * 1000 * 3 + 3000);
-      const armStallWatchdog = () => {
-        clearTimeout(watchdog);
-        watchdog = setTimeout(() => { if (!intentionalStop) fallbackToTyping(); }, stallBudgetMs);
+      audio.ontimeupdate = () => {
+        if (myToken !== revealToken || !audio.duration) return;
+        const frac = Math.min(1, audio.currentTime / audio.duration);
+        const upTo = prefix.length + Math.floor(part.text.length * frac);
+        el.textContent = fullText.slice(0, upTo);
+        el.scrollIntoView({ block: 'end' });
       };
-
-      // Сколько символов уже показано — общий счётчик и для onboundary, и для тикера ниже. reveal()
-      // всегда двигает вперёд, никогда не откатывает: если onboundary всё же сработает и окажется
-      // точнее тикера, он просто "обгонит" его на пару символов вперёд, а не покажет текст назад.
-      let shown = offset;
-      const reveal = (upTo) => {
-        if (upTo <= shown || myToken !== revealToken) return;
-        shown = upTo;
-        el.textContent = text.slice(0, shown);
-        el.scrollIntoView({ block: 'end' }); // тянет и ленту, и страницу целиком
+      audio.onended = () => {
+        if (myToken !== revealToken) return;
+        prefix = prefix ? prefix + ' ' + part.text : part.text;
+        el.textContent = fullText.slice(0, prefix.length);
+        partIdx += 1;
+        playPart();
       };
+      audio.onerror = () => { if (myToken === revealToken) fallbackFromHere(); };
 
-      const attemptSpeak = () => {
-        const myAttemptId = ++attemptId;
-        const utter = new SpeechSynthesisUtterance(remaining);
-        utter.voice = voice;
-        utter.lang = voice.lang || lang;
-        utter.rate = 0.95;
-
-        // Параллельный тикер: onboundary в части браузеров/устройств не срабатывает вовсе для целой
-        // фразы (см. давнюю особенность WebKit в комментарии ниже) — тогда без этого тикера весь текст
-        // выскакивал бы одним куском только по onend, вместо того чтобы идти вместе с речью. Тикер
-        // продвигает текст по оценке скорости чтения (~13 симв/сек, та же модель, что и в тайминге
-        // историй), скорректированной на utter.rate; onboundary, если сработает, всё равно даёт более
-        // точную границу слова и уходит вперёд тикера через тот же reveal().
-        let tickTimer = null;
-        const msPerChar = 1000 / (13 * (utter.rate || 1));
-        const startTicker = () => {
-          const tickStart = Date.now();
-          clearInterval(tickTimer);
-          tickTimer = setInterval(() => {
-            if (myAttemptId !== attemptId || intentionalStop) { clearInterval(tickTimer); return; }
-            reveal(Math.min(offset + Math.floor((Date.now() - tickStart) / msPerChar), text.length));
-          }, 120);
-        };
-        const stopTicker = () => { clearInterval(tickTimer); tickTimer = null; };
-
-        utter.onstart = () => {
-          if (myAttemptId !== attemptId) return;
-          started = true; armStallWatchdog();
-          startTicker();
-        };
-        utter.onboundary = (e) => {
-          if (myAttemptId !== attemptId) return;
-          started = true;
-          armStallWatchdog();
-          const localEnd = remaining.indexOf(' ', e.charIndex);
-          const absEnd = offset + (localEnd === -1 ? remaining.length : localEnd);
-          reveal(absEnd);
-        };
-        utter.onend = () => {
-          if (myAttemptId !== attemptId || intentionalStop) return;
-          stopTicker();
-          finishAll(text);
-        };
-        utter.onerror = () => {
-          // cancel() из retry ниже тоже асинхронно шлёт error именно отменённой попытке —
-          // без проверки myAttemptId это событие само сорвало бы retry в fallback раньше времени.
-          if (myAttemptId !== attemptId || intentionalStop) return;
-          stopTicker();
-          fallbackToTyping();
-        };
-
-        activeVoicePause = {
-          pause: () => { intentionalStop = true; stopTicker(); speechSynthesis.cancel(); },
-          resume: () => {
-            if (myToken !== revealToken) { activeVoicePause = null; return; }
-            intentionalStop = false;
-            speakFrom(shown);
-          },
-          abandon: () => { intentionalStop = true; stopTicker(); speechSynthesis.cancel(); finishAll(el.textContent || ''); },
-        };
-
-        watchdog = setTimeout(() => {
-          if (started || intentionalStop) return;
-          if (myAttemptId === 1) {
-            speechSynthesis.cancel();
-            attemptSpeak();
-          } else {
-            fallbackToTyping();
-          }
-        }, 900);
-        speechSynthesis.speak(utter);
+      activeVoicePause = {
+        pause: () => audio.pause(),
+        resume: () => audio.play().catch(fallbackFromHere),
+        abandon: () => finishAll(el.textContent || ''),
       };
-      attemptSpeak();
-    }
-
-    feedEl.addEventListener('click', onFeedClick);
-    speakFrom(0);
+      audio.play().catch(fallbackFromHere);
+    };
+    playPart();
   });
 }
 
@@ -570,16 +464,9 @@ function renderMenu() {
   });
 }
 
-async function startStory(key) {
+function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
-  // Список голосов браузера иногда ещё не успевает загрузиться к моменту первого клика по карточке
-  // (getVoices() в pickVoice() при загрузке страницы вернул пустой список), а onvoiceschanged к этому
-  // моменту мог ещё не сработать — voice так и остаётся null, и первая же фраза истории безусловно
-  // уходит на печать, сколько бы ни ждал прогрев (прогревать нечего). К моменту клика по карточке голоса
-  // почти наверняка уже подгрузились — пробуем выбрать голос ещё раз прямо здесь, если это не удалось раньше.
-  if (!voice && 'speechSynthesis' in window) pickVoice();
   ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
-  await warmUpSpeech(); // дожидаемся реального прогрева, а не просто запускаем и тут же перебиваем его
   currentKey = key;
   const character = content().CHARACTERS.find(c => c.key === key);
   story = new Engine.Story(content().STORIES[key]);
@@ -626,9 +513,11 @@ function renderProgress() {
 }
 
 // Клавиатура: 1/2 — выбрать вариант тьмы/света на сценах с выбором (в остальных сценах кнопок
-// больше нет — история идёт сама, см. renderCurrent()).
+// больше нет — история идёт сама, см. renderCurrent()); пробел — пауза/снятие паузы (тот же
+// эффект, что клик по кнопке #btnPause), preventDefault — иначе браузер прокручивает страницу.
 document.addEventListener('keydown', (e) => {
   if (gameEl.classList.contains('hidden')) return;
+  if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); togglePause(); return; }
   const buttons = controlsEl.querySelectorAll('button');
   if (e.key === '1' && buttons[0]) buttons[0].click();
   else if (e.key === '2' && buttons[1]) buttons[1].click();
@@ -637,7 +526,22 @@ document.addEventListener('keydown', (e) => {
 async function renderCurrent() {
   isPaused = false; // новая сцена начинается не на паузе, даже если предыдущая была поставлена
   updatePauseBtn();
+
+  // Сцены без выбора склеиваются в один непрерывный текст вплоть до сцены с настоящим выбором
+  // (или до конца истории) — по просьбе пользователя убрать разбивку на отдельные "пузыри"/паузы
+  // там, где выбора всё равно нет. story.advance() вызывается "тихо" для каждой пройденной линейной
+  // сцены — history/state обновляются как обычно (нужно для прогресса и faith), просто без
+  // покадрового рендера и без паузы между репликами: голос/печать идут одним сплошным потоком.
+  const parts = [{ id: story.currentId, text: story.current().text }];
+  const seenIds = new Set([story.currentId]); // на случай зацикленного графа — в валидном контенте не сработает
+  while (!(story.current().choices && story.current().choices.length) && story.current().next != null) {
+    story.advance();
+    if (seenIds.has(story.currentId)) break;
+    seenIds.add(story.currentId);
+    parts.push({ id: story.currentId, text: story.current().text });
+  }
   const scene = story.current();
+
   const block = document.createElement('div');
   block.className = 'line';
   feedEl.appendChild(block);
@@ -645,7 +549,7 @@ async function renderCurrent() {
   controlsEl.innerHTML = '';
   requestAnimationFrame(() => block.classList.add('line-visible'));
 
-  await speakAndReveal(block, scene.text);
+  await speakAndReveal(block, parts);
   block.scrollIntoView({ block: 'end' });
   renderProgress();
 
@@ -654,10 +558,20 @@ async function renderCurrent() {
       const btn = document.createElement('button');
       btn.textContent = choice.label;
       btn.style.transitionDelay = (i * 0.08) + 's';
+      // Кнопки красятся не в цвет персонажа, а по направлению выбора — красный (тьма) / зелёный
+      // (свет), тот же смысл, что и у сердец/полоски веры, чтобы "неправильный" и "правильный"
+      // ответ были визуально различимы, а не оба одного нейтрального цвета. Направление берём из
+      // знака effects.faith у КОНКРЕТНОГО варианта, а не из позиции кнопки (см. pulseHeart выше —
+      // варианты не всегда идут в порядке "сначала светлый").
+      const delta = choice.effects && choice.effects.faith;
+      const dir = delta > 0 ? 'light' : delta < 0 ? 'dark' : null;
+      if (dir) {
+        const bg = dir === 'light' ? '#34c9a3' : '#e2574c';
+        btn.style.background = bg;
+        btn.style.color = readableTextOn(bg);
+      }
       btn.addEventListener('click', async () => {
-        const delta = choice.effects && choice.effects.faith;
-        if (delta) {
-          const dir = delta > 0 ? 'light' : 'dark';
+        if (dir) {
           pulseHeart(dir);
           showChoiceArrow(dir);
         }
@@ -668,35 +582,69 @@ async function renderCurrent() {
       controlsEl.appendChild(btn);
       requestAnimationFrame(() => btn.classList.add('btn-visible'));
     });
-  } else if (scene.next != null) {
-    // Без кнопки "Далее" — линейные сцены без выбора идут сами, с небольшой паузой на прочтение
-    // уже показанного текста. Останавливаемся только там, где есть настоящий выбор (см. ветку выше).
-    const myToken = revealToken;
-    setTimeout(() => {
-      if (myToken !== revealToken) return; // пользователь успел уйти в меню/начать другую историю
-      story.advance();
-      renderCurrent();
-    }, 900);
   } else {
+    // scene.next == null — конец истории (промежуточные линейные сцены уже поглощены циклом выше,
+    // сюда мы попадаем только на настоящем финале, а не на каждой сцене-мостике).
     markCompleted(currentKey);
-    controlsEl.innerHTML = `<div class="ended">${t('ended')}</div>`;
+    controlsEl.innerHTML = `<div class="ended">${t('ended')}</div><button id="btnShare">${t('share')}</button>`;
+    const shareBtn = document.getElementById('btnShare');
+    requestAnimationFrame(() => shareBtn.classList.add('btn-visible'));
+    // Кнопка "Поделиться" — без награды и отслеживания, просто готовый текст с именем персонажа и
+    // тем, каким путём (свет/тьма) закончилась история у этого игрока (не всегда "светлый" —
+    // берём по факту знака faith, а не считаем, что все выбирают одинаково). Ссылка ведёт прямо на
+    // эту историю (?story=<key>, см. getSharedStoryKey/enterApp) — чтобы можно было переслать
+    // конкретную историю близкому человеку, а не общую ссылку на меню со всеми 50.
+    shareBtn.addEventListener('click', () => {
+      const character = content().CHARACTERS.find(c => c.key === currentKey);
+      const pathWord = (story.state.faith || 0) > 0 ? t('light') : t('dark');
+      const text = t('shareLine').replace('{name}', character.name).replace('{path}', pathWord) + '\nhttps://faithchoice.net/?story=' + currentKey;
+      // Внутри Capacitor-приложения обычные navigator.share()/navigator.clipboard ведут себя
+      // непредсказуемо (голый Android WebView, в отличие от настоящего мобильного браузера, часто
+      // вообще не реализует эти веб-API или тихо отказывает без ошибки) — используем нативный плагин
+      // @capacitor/share, который идёт через системное окно "Поделиться" напрямую. На самом сайте
+      // (window.Capacitor нет) всё остаётся как было — через стандартные веб-API.
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        window.Capacitor.Plugins.Share.share({ text }).catch(() => {});
+      } else if (navigator.share) {
+        navigator.share({ text }).catch(() => {}); // пользователь мог просто закрыть системное окно — не ошибка
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          shareBtn.textContent = '✓';
+          setTimeout(() => { if (shareBtn.isConnected) shareBtn.textContent = t('share'); }, 1500);
+        }).catch(() => {});
+      }
+    });
+
+    // Ненавязчивая просьба поддержать проект — каждую 10-ю пройденную историю, не чаще. Выключена
+    // флагом DONATE_BANNER_ENABLED, пока не готова сама кнопка доната (см. константу вверху файла).
+    let donateShown = false;
+    if (DONATE_BANNER_ENABLED && getCompleted().size % 10 === 0) {
+      const banner = document.createElement('div');
+      banner.className = 'donate-banner';
+      banner.innerHTML = `<span>${t('donateText')}</span><a href="${DONATE_URL}" target="_blank" rel="noopener">${t('donateLink')}</a><button class="donate-close" aria-label="${t('exit')}">✕</button>`;
+      controlsEl.appendChild(banner);
+      banner.querySelector('.donate-close').addEventListener('click', () => banner.remove());
+      donateShown = true;
+    }
+
     // Автовозврат в меню без клика — backToMenu() сам прокручивает список к карточке только что
-    // пройденной истории (см. её код), а не сбрасывает список наверх.
+    // пройденной истории (см. её код), а не сбрасывает список наверх. Время увеличено с 1.6с до 7с —
+    // раньше не хватало времени даже заметить кнопку "Поделиться", не то что нажать её. Если ещё
+    // показан баннер поддержки — даём заметно больше времени (14с), чтобы успеть прочитать и его.
     const myToken = revealToken;
     setTimeout(() => {
       if (myToken !== revealToken) return; // пользователь уже сам ушёл раньше
       backToMenu();
-    }, 1600);
+    }, donateShown ? 14000 : 7000);
   }
   controlsEl.scrollIntoView({ block: 'end', behavior: 'smooth' }); // кнопки не всегда влезают на экран без этого
 }
 
 function backToMenu() {
   revealToken += 1; // отменяет любую ещё доигрывающую печать/озвучку прежней истории
-  // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через cancel(), новых
+  // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через pause(), новых
   // событий от неё не будет) — без этого промис speakAndReveal завис бы навсегда.
   if (activeVoicePause) { activeVoicePause.abandon(); activeVoicePause = null; }
-  speechSynthesis.cancel();
   gameEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
   basedOnEl.parentNode.insertBefore(langSwitchEl, basedOnEl); // переключатель языка возвращается под заголовок

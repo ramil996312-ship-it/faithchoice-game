@@ -124,10 +124,17 @@
   #storyTitle { font-size: 1.2rem; color: var(--accent); text-align: center; }
   #storyTheme { font-size: 0.85rem; color: var(--text-dim); text-align: center; margin-bottom: 0.75rem; }
 
-  #progress { display: flex; justify-content: center; align-items: center; gap: 0.4rem; }
-  .dot { width: 17px; height: 22px; transition: color 0.3s, opacity 0.3s; }
+  #progress { display: flex; justify-content: center; align-items: center; gap: 0.4rem; flex-shrink: 1; min-width: 0; }
+  .dot { width: 17px; height: 22px; transition: color 0.3s, opacity 0.3s; flex-shrink: 0; }
   .dot svg { width: 100%; height: 100%; display: block; }
-  #gameTopRow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+  #gameTopRow {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem; row-gap: 0.4rem; margin-bottom: 0.75rem; flex-wrap: wrap;
+  }
+  /* flex-wrap выше — подстраховка на случай переполнения (узкий экран/крупный системный шрифт):
+     ряд переносится на вторую строку целиком, а не обрезает кнопку звука за пределы экрана без
+     возможности до неё дотянуться — это и произошло в Capacitor-приложении на реальном телефоне
+     (в браузере эффективная ширина чуть шире, там не проявлялось). */
   #gameTopRow #langSwitch { margin-bottom: 0; }
   #topRight { display: flex; align-items: center; gap: 0.3rem; flex: none; }
   #btnPause, #btnMute {
@@ -173,9 +180,71 @@
     100% { left: 96%; opacity: 0; }
   }
   .faith-labels { display: flex; justify-content: space-between; align-items: center; margin: -0.15rem 0 1.4rem; }
-  .heart-label { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 3.6rem; height: 3.4rem; }
+  .heart-label {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 6.2rem; height: 5.85rem; flex-shrink: 0;
+    background: none; border: none; padding: 0; margin: 0; cursor: pointer; font: inherit;
+    -webkit-tap-highlight-color: transparent; transition: transform 0.15s ease;
+  }
+  .heart-label:hover, .heart-label:focus-visible { transform: scale(1.05); }
+  .heart-label:active { transform: scale(0.97); }
   .heart-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .heart-text { position: relative; z-index: 1; font-size: 0.82rem; font-weight: bold; color: #10171c; transform: translateY(-24%); }
+  .heart-text { position: relative; z-index: 1; font-size: 1.4rem; font-weight: bold; color: #10171c; transform: translateY(-24%); }
+  /* На узких экранах (~320-360px) сердца + 6 стрелок прогресса в сумме шире доступной ширины — раньше
+     это решалось тем, что сердца сами сжимались flexbox'ом, а JS-подгонка текста в сердце (fitHeartText)
+     измеряла ширину ДО этого сжатия, из-за чего слово вроде "Darkness" вылезало за контур. Явно
+     фиксируем размер сердец (flex-shrink:0 выше) и вместо них ужимаем стрелки прогресса — они
+     декоративны, потерять пиксель-два там не страшно, а слово в сердце должно быть читаемым. Правило
+     должно идти ПОСЛЕ базового .heart-label/.heart-text в файле — иначе при равной специфичности
+     базовое правило (объявлено позже) перебивает media query независимо от того, что viewport уже.
+  */
+  @media (max-width: 360px) {
+    .heart-label { width: 5.2rem; height: 4.9rem; }
+    .heart-text { font-size: 1.15rem; }
+    .dot { width: 12px; height: 16px; }
+    #progress { gap: 0.2rem; }
+    #gameTopRow { gap: 0.3rem; }
+    #gameTopRow .lang-btn { padding: 0.2rem 0.4rem; font-size: 0.72rem; }
+    #btnExit { padding: 0.3rem 0.5rem; font-size: 0.78rem; }
+  }
+
+  /* Всплывающий стих по клику на сердце тьмы/света — не даёт полосу прокрутки под собой (position:fixed,
+     поверх всего), закрывается кликом по фону или крестиком. */
+  .verse-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1.2rem; }
+  .verse-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+  .verse-modal-box {
+    position: relative; max-width: 480px; width: 100%; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 1.6rem 1.8rem;
+    animation: verseIn 0.2s ease-out;
+  }
+  @keyframes verseIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  #verseModalText { margin: 0; font-size: 1.05rem; line-height: 1.6; color: var(--text); white-space: pre-line; }
+  #verseModalClose {
+    position: absolute; top: 0.6rem; right: 0.6rem; background: none; border: none; color: var(--text-dim);
+    font-size: 1.1rem; cursor: pointer; padding: 0.4rem 0.6rem; line-height: 1;
+  }
+  #verseModalClose:hover { color: var(--text); }
+  /* Тёмный стих (1 Кор. 6:9-10) — сплошная красная зона, белый текст, без полутонов: смысл в
+     предупреждении, не в уюте. Не зависит от --surface/--text (тема сайта), цвет фиксирован. */
+  .verse-modal-box.verse-dark {
+    background: linear-gradient(160deg, #e2574c, #b83b32); border-color: #10171c;
+  }
+  .verse-modal-box.verse-dark #verseModalText { color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+  .verse-modal-box.verse-dark #verseModalClose { color: rgba(255,255,255,0.75); }
+  .verse-modal-box.verse-dark #verseModalClose:hover { color: #fff; }
+  /* Светлый стих (Рим. 10:13) — тёплое сияющее оформление вместо простого текста в окне: радиальный
+     золотистый градиент из центра, курсивный засечковый шрифт, мягкое свечение по контуру карточки —
+     фиксированные тёплые тона, тоже не зависят от тёмной/светлой темы сайта. */
+  .verse-modal-box.verse-light {
+    background: radial-gradient(ellipse at 50% 0%, #fdf6ec 0%, #f3e2b8 70%, #e9d29c 100%);
+    border-color: #d8b568;
+    box-shadow: 0 0 50px 8px rgba(253, 224, 156, 0.35), inset 0 0 40px rgba(255,255,255,0.4);
+  }
+  .verse-modal-box.verse-light #verseModalText {
+    color: #4a3a1a; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 1.15rem;
+  }
+  .verse-modal-box.verse-light #verseModalClose { color: rgba(74,58,26,0.55); }
+  .verse-modal-box.verse-light #verseModalClose:hover { color: #4a3a1a; }
   .heart-dark { --glow: #e2574c; }
   .heart-light { --glow: #fdf6ec; }
   /* На светлой теме страницы кремовое сердце сливается с фоном (оба светлые) — без чёрной обводки
@@ -194,6 +263,8 @@
   #feed {
     max-height: 60vh; overflow-y: auto;
     padding-right: 0.25rem; margin-bottom: 1rem;
+    touch-action: manipulation; /* без этого мобильный браузер трактует двойной тап как жест зума
+      страницы вместо двух click-событий подряд — двойной тап для пропуска сцены не срабатывал */
   }
   #pauseHint {
     display: none; text-align: center; color: var(--accent); font-size: 0.9rem;
@@ -216,6 +287,21 @@
   #controls button.btn-visible { opacity: 1; transform: translateY(0); }
   #controls button:hover { filter: brightness(1.12); }
   .ended { text-align: center; color: var(--text-dim); margin-bottom: 0.25rem; }
+  .donate-banner {
+    display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.7rem 0.9rem; font-size: 0.85rem;
+  }
+  .donate-banner span { flex: 1; color: var(--text-dim); }
+  .donate-banner a {
+    color: var(--accent); font-weight: bold; text-decoration: none; white-space: nowrap;
+  }
+  .donate-banner a:hover { text-decoration: underline; }
+  .donate-banner .donate-close {
+    background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1rem;
+    padding: 0.1rem 0.3rem; opacity: 0.7; flex: none;
+  }
+  .donate-banner .donate-close:hover { opacity: 1; }
   #aboutLink {
     display: block; text-align: center; margin-top: 1.5rem; color: var(--text-dim);
     text-decoration: none; font-size: 0.85rem;
@@ -255,13 +341,21 @@
       <div id="faithArrow" class="faith-arrow"></div>
     </div>
     <div class="faith-labels" id="faithLabels">
-      <span class="heart-label heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#e2574c" stroke="#10171c" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text"></span></span>
+      <button type="button" class="heart-label heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#e2574c" stroke="#10171c" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text"></span></button>
       <div id="progress"></div>
-      <span class="heart-label heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#fdf6ec"/></svg><span class="heart-text"></span></span>
+      <button type="button" class="heart-label heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#fdf6ec"/></svg><span class="heart-text"></span></button>
     </div>
     <div id="feed"></div>
     <div id="pauseHint">⏸ Пауза — нажмите, чтобы продолжить</div>
     <div id="controls"></div>
+  </div>
+
+  <div id="verseModal" class="verse-modal hidden">
+    <div id="verseModalBackdrop" class="verse-modal-backdrop"></div>
+    <div class="verse-modal-box">
+      <p id="verseModalText"></p>
+      <button type="button" id="verseModalClose">✕</button>
+    </div>
   </div>
 </main>
 

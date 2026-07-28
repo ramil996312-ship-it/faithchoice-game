@@ -8,7 +8,14 @@ const DONATE_BANNER_ENABLED = false;
 const DONATE_URL = '#';
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
-const AUDIO_BASE = 'audio'; // /var/www/faithchoice.net/audio/<lang>/<storyKey>/<sceneId>.mp3 — предзаписанная озвучка (Google Cloud TTS)
+// /var/www/faithchoice.net/audio/<lang>/<storyKey>/<sceneId>.mp3 — предзаписанная озвучка (Google Cloud TTS).
+// Внутри Capacitor-приложения страница грузится из локального бандла (file://-подобная схема), а не с
+// сайта — относительный путь 'audio' там ни на что не сослался бы. 500 МБ файлов сознательно НЕ зашиты
+// в приложение (раздули бы установку в разы) — вместо этого внутри приложения звук стримится с живого
+// сайта по полному адресу; на самом сайте (`window.Capacitor` отсутствует) путь остаётся относительным,
+// как раньше.
+const AUDIO_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+  ? 'https://faithchoice.net/audio' : 'audio';
 
 let story = null;
 let currentKey = null; // ключ текущего персонажа — нужен, чтобы отметить историю пройденной по достижении финала
@@ -591,7 +598,14 @@ async function renderCurrent() {
       const character = content().CHARACTERS.find(c => c.key === currentKey);
       const pathWord = (story.state.faith || 0) > 0 ? t('light') : t('dark');
       const text = t('shareLine').replace('{name}', character.name).replace('{path}', pathWord) + '\nhttps://faithchoice.net/?story=' + currentKey;
-      if (navigator.share) {
+      // Внутри Capacitor-приложения обычные navigator.share()/navigator.clipboard ведут себя
+      // непредсказуемо (голый Android WebView, в отличие от настоящего мобильного браузера, часто
+      // вообще не реализует эти веб-API или тихо отказывает без ошибки) — используем нативный плагин
+      // @capacitor/share, который идёт через системное окно "Поделиться" напрямую. На самом сайте
+      // (window.Capacitor нет) всё остаётся как было — через стандартные веб-API.
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        window.Capacitor.Plugins.Share.share({ text }).catch(() => {});
+      } else if (navigator.share) {
         navigator.share({ text }).catch(() => {}); // пользователь мог просто закрыть системное окно — не ошибка
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(() => {
