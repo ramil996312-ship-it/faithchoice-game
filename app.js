@@ -79,6 +79,32 @@ exitBtn.addEventListener('click', backToMenu);
 // --- Звук: предзаписанная озвучка (mp3, Google Cloud TTS), с откатом на печать со "стрёкотом"
 // (Web Audio API), если файл не загрузился — например, сцены нет в audio/ или сеть отвалилась.
 
+// Фоновая озвучка внутри приложения (не на сайте) — без этого Android останавливает воспроизведение
+// и JS сразу же при сворачивании приложения. Требует showить постоянное уведомление, пока звучит
+// история, — это обязательное условие самого Android для любого фонового звука, не наша прихоть.
+// Начинается при входе в историю, останавливается при выходе в меню — не висит постоянно.
+async function startBackgroundAudioService(characterName) {
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  const ForegroundService = window.Capacitor.Plugins.ForegroundService;
+  if (!ForegroundService) return;
+  try {
+    const perm = await ForegroundService.checkPermissions();
+    if (perm.display !== 'granted') await ForegroundService.requestPermissions();
+    await ForegroundService.startForegroundService({
+      id: 1,
+      title: t('title'),
+      body: characterName,
+      smallIcon: 'ic_stat_faithchoice',
+      serviceType: 2, // FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK — см. AndroidManifest.xml
+    });
+  } catch {} // нет разрешения на уведомления и т.п. — приложение просто продолжит работать как раньше (без фона)
+}
+function stopBackgroundAudioService() {
+  if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
+  const ForegroundService = window.Capacitor.Plugins.ForegroundService;
+  if (ForegroundService) ForegroundService.stopForegroundService().catch(() => {});
+}
+
 function ensureAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -484,6 +510,7 @@ function startStory(key) {
   gameEl.classList.remove('hidden');
   gameTopRowEl.insertBefore(langSwitchEl, topRightEl); // переключатель языка переезжает между "Меню" и паузой на время истории
   fitHeartLabels(); // сердца только что стали видимыми — раньше clientWidth был 0, подгонка текста не сработала бы
+  startBackgroundAudioService(character.name);
   renderCurrent();
 }
 
@@ -645,6 +672,7 @@ function backToMenu() {
   // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через pause(), новых
   // событий от неё не будет) — без этого промис speakAndReveal завис бы навсегда.
   if (activeVoicePause) { activeVoicePause.abandon(); activeVoicePause = null; }
+  stopBackgroundAudioService();
   gameEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
   basedOnEl.parentNode.insertBefore(langSwitchEl, basedOnEl); // переключатель языка возвращается под заголовок
