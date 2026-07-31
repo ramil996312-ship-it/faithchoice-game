@@ -69,6 +69,7 @@ const langSwitchEl = document.getElementById('langSwitch');
 const gameTopRowEl = document.getElementById('gameTopRow');
 const topRightEl = document.getElementById('topRight');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
+const menuProgressEl = document.getElementById('menuProgress');
 const reminderRowEl = document.getElementById('reminderRow');
 const reminderLabelEl = document.getElementById('reminderLabel');
 const reminderTimeInputEl = document.getElementById('reminderTimeInput');
@@ -792,6 +793,18 @@ function renderMenu() {
   menuEl.querySelectorAll('.card').forEach(btn => {
     btn.addEventListener('click', () => startStory(btn.dataset.key));
   });
+  updateMenuProgress(completed);
+}
+
+// Общий прогресс по всей коллекции ("Пройдено X из N") — виден только на экране меню (см.
+// startStory/backToMenu), даёт ориентир по масштабу коллекции, которого раньше не было вообще.
+function updateMenuProgress(completed) {
+  if (!menuProgressEl) return;
+  const total = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
+  const done = content().CHARACTERS.filter(c => content().STORIES[c.key] && completed.has(c.key)).length;
+  if (total === 0) { menuProgressEl.classList.add('hidden'); return; }
+  menuProgressEl.textContent = t('collectionProgress').replace('{done}', done).replace('{total}', total);
+  menuProgressEl.classList.remove('hidden');
 }
 
 function startStory(key) {
@@ -811,6 +824,7 @@ function startStory(key) {
   renderFaith();
   renderProgress();
   menuEl.classList.add('hidden');
+  if (menuProgressEl) menuProgressEl.classList.add('hidden');
   gameEl.classList.remove('hidden');
   updateOfflineBtn();
   gameTopRowEl.insertBefore(langSwitchEl, topRightEl); // переключатель языка переезжает между "Меню" и паузой на время истории
