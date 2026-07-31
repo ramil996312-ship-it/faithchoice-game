@@ -69,6 +69,9 @@ const langSwitchEl = document.getElementById('langSwitch');
 const gameTopRowEl = document.getElementById('gameTopRow');
 const topRightEl = document.getElementById('topRight');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
+const reminderRowEl = document.getElementById('reminderRow');
+const reminderLabelEl = document.getElementById('reminderLabel');
+const reminderTimeInputEl = document.getElementById('reminderTimeInput');
 
 function content() { return window.Content[lang]; }
 function t(key) { return I18N[lang][key]; }
@@ -150,7 +153,26 @@ const REMINDER_NOTIF_ID = 777;
 // с важностью по умолчанию (без баннера), а Android не даёт менять важность существующего канала
 // программно (только сам пользователь — вручную, в настройках). Новый id гарантирует канал с нуля.
 const REMINDER_CHANNEL_ID = 'faithchoice_reminder_v2';
-const REMINDER_HOUR = 8; // 8:00 утра по местному времени телефона
+const DEFAULT_REMINDER_TIME = '08:00'; // используется, пока игрок сам не выбрал своё время (см. reminderRow)
+
+// Игрок сам выбирает удобное время через <input type="time"> в меню — не всем удобно именно 8 утра.
+function getReminderTime() {
+  const saved = localStorage.getItem('reminderTime');
+  const m = saved && saved.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return { hour: 8, minute: 0 };
+  return { hour: +m[1], minute: +m[2] };
+}
+function initReminderTimeUI() {
+  if (!isNative || !reminderRowEl) return;
+  reminderRowEl.classList.remove('hidden');
+  reminderLabelEl.textContent = t('reminderLabel');
+  reminderTimeInputEl.value = localStorage.getItem('reminderTime') || DEFAULT_REMINDER_TIME;
+  reminderTimeInputEl.addEventListener('change', () => {
+    if (!reminderTimeInputEl.value) return; // пользователь очистил поле, а не выбрал время — игнорируем
+    localStorage.setItem('reminderTime', reminderTimeInputEl.value);
+    scheduleDailyReminder();
+  });
+}
 
 // Какую историю предложить в следующем напоминании: сначала по порядку первую ещё не пройденную;
 // когда пройдены все — первую пройденную, где видели только одну из двух концовок (см.
@@ -193,7 +215,7 @@ async function scheduleDailyReminder() {
         channelId: REMINDER_CHANNEL_ID,
         title: t('reminderTitle'),
         body: t('reminderBody').replace('{name}', character.name),
-        schedule: { on: { hour: REMINDER_HOUR, minute: 0 }, allowWhileIdle: true },
+        schedule: { on: getReminderTime(), allowWhileIdle: true },
         extra: { story: key },
       }],
     });
@@ -612,6 +634,7 @@ function applyStaticText() {
   document.getElementById('ageGateTitle').textContent = t('ageGateTitle');
   document.getElementById('ageGateBody').textContent = t('ageGateBody');
   document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
+  if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
 }
 
 // Ссылка на конкретную историю (?story=marat из кнопки "Поделиться") — чтобы можно было отправить
@@ -984,4 +1007,5 @@ renderLangSwitch();
 applyStaticText();
 renderMenu();
 updateOfflineBtn();
+initReminderTimeUI();
 initAgeGate();

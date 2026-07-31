@@ -339,7 +339,18 @@
     text-decoration: none; font-size: 0.85rem;
   }
   #aboutLink:hover { color: var(--accent); }
-  #menu.hidden + #aboutLink { display: none; } /* видна только вместе с меню, не поверх игры/гейта */
+  /* ~ (любой следующий сиблинг), не + (сразу следующий) — между #menu и #aboutLink стоит #reminderRow;
+     видны только вместе с меню, не поверх игры/гейта. */
+  #menu.hidden ~ #aboutLink { display: none; }
+  #menu.hidden ~ #reminderRow { display: none; }
+  #reminderRow {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-dim);
+  }
+  #reminderTimeInput {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); font-family: inherit; padding: 0.15rem 0.3rem;
+  }
 </style>
 </head>
 <body>
@@ -356,6 +367,10 @@
   </div>
 
   <div id="menu" class="hidden"></div>
+  <div id="reminderRow" class="hidden">
+    <label for="reminderTimeInput" id="reminderLabel"></label>
+    <input type="time" id="reminderTimeInput">
+  </div>
   <a id="aboutLink" href="about.html">О проекте / связаться с нами</a>
 
   <div id="game" class="hidden">
