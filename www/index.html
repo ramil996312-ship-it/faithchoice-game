@@ -23,6 +23,10 @@
     --surface: #1a232a; --border: #2c3d45;
     --track-bg: #22303a; --track-divider: #3d4f56;
     --btn-text: #10171c; --glow-opacity: 0.22;
+    /* Мягкая тень — для лёгкой "приподнятости" карточек/кнопок над фоном, не разлапистая/тёмная,
+       чтобы не спорить с уже настроенным свечением (body::before) под тёмную тему. */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.35);
+    --shadow-md: 0 6px 16px rgba(0,0,0,0.35);
   }
   :root[data-theme="light"] {
     --accent: #1c9d7d; --accent2: #8b6cf0;
@@ -30,6 +34,8 @@
     --surface: #ffffff; --border: #d8d3c8;
     --track-bg: #e7e1d3; --track-divider: #c9c0ac;
     --btn-text: #ffffff; --glow-opacity: 0;
+    --shadow-sm: 0 1px 3px rgba(30,20,10,0.08);
+    --shadow-md: 0 6px 16px rgba(30,20,10,0.1);
   }
   /* Цвет персонажа для светлой темы пересчитывается точно в app.js (colorForTheme) — фильтр здесь
      не нужен, CSS var(--accent) уже приходит готовым под нужный контраст. */
@@ -38,8 +44,9 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: 50%;
     width: 2.2rem; height: 2.2rem; font-size: 1.1rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s;
   }
-  #btnTheme:hover { border-color: var(--accent); }
+  #btnTheme:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
   body {
     margin: 0; padding: 2rem 1rem;
     background: var(--bg); color: var(--text);
@@ -64,20 +71,22 @@
     100% { background-position: 15% 10%, 85% 90%; }
   }
   main { width: 100%; max-width: 640px; }
-  h1 { font-size: 1.4rem; font-weight: normal; text-align: center; color: var(--accent); margin-bottom: 0.75rem; }
+  h1 { font-size: 1.4rem; font-weight: normal; text-align: center; color: var(--accent); margin-bottom: 0.75rem; letter-spacing: 0.02em; }
   .hidden { display: none !important; }
 
   #ageGate {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 1.25rem 1.4rem;
+    border-radius: 8px; padding: 1.25rem 1.4rem; box-shadow: var(--shadow-sm);
   }
   #ageGate h2 { margin: 0 0 0.6rem; font-size: 1.1rem; color: var(--accent); font-weight: normal; }
   #ageGate p { margin: 0 0 1rem; font-size: 0.9rem; color: var(--text-soft); }
   #ageGate button {
     background: var(--accent); color: var(--btn-text); border: none; border-radius: 6px;
     padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer; width: 100%;
+    box-shadow: var(--shadow-sm); transition: filter 0.15s, box-shadow 0.2s, transform 0.15s;
   }
-  #ageGate button:hover { filter: brightness(1.12); }
+  #ageGate button:hover { filter: brightness(1.12); box-shadow: var(--shadow-md); }
+  #ageGate button:active { transform: translateY(1px); box-shadow: var(--shadow-sm); }
 
   #langSwitch { display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 1.5rem; }
   .lang-btn {
@@ -102,15 +111,17 @@
     display: flex; align-items: center; gap: 0.9rem; width: 100%; text-align: left;
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
     border-radius: 8px; color: inherit; font-family: inherit; padding: 1rem 1.1rem; cursor: pointer;
+    box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
   }
-  .card:hover { border-color: var(--accent); }
+  .card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .card:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
   .card-soon { opacity: 0.55; }
   .card-done { opacity: 0.72; }
   .icon-badge {
     position: absolute; right: -4px; bottom: -4px; width: 1rem; height: 1rem;
     border-radius: 50%; background: #6bbf6b; color: #10171c; border: 2px solid var(--surface);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.6rem; line-height: 1;
+    font-size: 0.6rem; line-height: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .card-icon {
     flex: none; width: 2.2rem; height: 2.2rem; color: var(--accent);
@@ -123,14 +134,14 @@
     display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--accent);
   }
   .card-name { font-size: 1.3rem; color: var(--accent); }
-  .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; }
+  .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.35; }
 
   #game { position: relative; }
   #basedOnBadge {
     text-align: center; font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase;
     color: var(--text-dim); margin-bottom: 0.25rem; min-height: 1em;
   }
-  #storyTitle { font-size: 1.2rem; color: var(--accent); text-align: center; }
+  #storyTitle { font-size: 1.2rem; color: var(--accent); text-align: center; letter-spacing: 0.02em; }
   #storyTheme { font-size: 0.85rem; color: var(--text-dim); text-align: center; margin-bottom: 0.75rem; }
 
   #progress { display: flex; justify-content: center; align-items: center; gap: 0.4rem; flex-shrink: 1; min-width: 0; }
@@ -164,8 +175,9 @@
     flex: none; background: var(--surface); border: 1.5px solid var(--accent);
     color: var(--accent); border-radius: 6px; font-family: inherit; font-size: 0.85rem; font-weight: bold;
     cursor: pointer; opacity: 1; padding: 0.35rem 0.7rem;
+    box-shadow: var(--shadow-sm); transition: background 0.15s, color 0.15s, box-shadow 0.2s;
   }
-  #btnExit:hover { background: var(--accent); color: var(--btn-text); }
+  #btnExit:hover { background: var(--accent); color: var(--btn-text); box-shadow: var(--shadow-md); }
 
   .faith-track-wrap { position: relative; margin-bottom: 1.25rem; }
   .faith-track {
@@ -292,7 +304,7 @@
   .line {
     background: var(--surface); border-left: 3px solid var(--accent);
     padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.6rem;
-    min-height: 1.5em;
+    min-height: 1.5em; box-shadow: var(--shadow-sm);
     opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease;
   }
   .line-visible { opacity: 1; transform: translateY(0); }
@@ -300,10 +312,13 @@
   #controls button {
     background: var(--accent); color: var(--btn-text); border: none; border-radius: 6px;
     padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer; filter: brightness(1);
-    opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.3s ease, filter 0.15s;
+    box-shadow: var(--shadow-sm);
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.2s ease, filter 0.15s, box-shadow 0.2s;
   }
   #controls button.btn-visible { opacity: 1; transform: translateY(0); }
-  #controls button:hover { filter: brightness(1.12); }
+  #controls button:hover { filter: brightness(1.12); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  #controls button:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
   /* Кнопка, а не просто текст — люди инстинктивно нажимают на "История завершена." (она стоит рядом
      с настоящей кнопкой "Поделиться" и выглядит так же кликабельно), раньше в ответ ничего не
      происходило и это читалось как баг. Теперь нажатие сразу возвращает в меню — то же самое, что и
@@ -318,7 +333,8 @@
     margin-bottom: 0.25rem; background: var(--surface); border: 1px solid var(--border);
     border-radius: 6px; font-family: inherit; font-size: 1rem; cursor: pointer; padding: 0.7rem 1rem;
   }
-  #controls button.ended:hover { border-color: var(--accent); color: var(--accent); }
+  #controls button.ended:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  #controls button.ended:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
   .donate-banner {
     display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
