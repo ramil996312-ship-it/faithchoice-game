@@ -88,6 +88,15 @@
   .lang-btn:hover { border-color: var(--accent); color: var(--text); }
   .lang-on { border-color: var(--accent); color: var(--accent); }
 
+  /* Живёт в #topRight рядом с паузой/звуком (см. index.html) — видна только во время самой истории,
+     не на экране меню (по просьбе пользователя: не должна быть первым, что бросается в глаза при
+     открытии игры). Компактный вид под стать соседним иконкам, а не большая кнопка. */
+  #btnOfflineDownload {
+    background: none; border: none; color: var(--text-dim); font-family: inherit;
+    font-size: 0.75rem; cursor: pointer; opacity: 0.85; padding: 0.25rem 0.4rem;
+  }
+  #btnOfflineDownload:hover { color: var(--accent); opacity: 1; }
+
   #menu { display: grid; gap: 0.75rem; }
   .card {
     display: flex; align-items: center; gap: 0.9rem; width: 100%; text-align: left;
@@ -127,6 +136,15 @@
   #progress { display: flex; justify-content: center; align-items: center; gap: 0.4rem; flex-shrink: 1; min-width: 0; }
   .dot { width: 17px; height: 22px; transition: color 0.3s, opacity 0.3s; flex-shrink: 0; }
   .dot svg { width: 100%; height: 100%; display: block; }
+  /* На длинной истории лента постоянно скроллит страницу вниз (см. scrollIntoView в app.js). Сначала
+     закрепили только #gameTopRow (кнопка "Меню" уезжала за верх экрана) — но тогда имя персонажа и
+     полоска тьма/свет со стрелочкой выбора, идущие СРАЗУ ЗА ним не-закреплённые, начинали уезжать
+     под закреплённую строку и обрезались почти до нуля (не только кнопка важна — имя героя тоже
+     должно быть видно всегда, иначе непонятно, о ком речь; и стрелочка выбора должна доигрывать
+     свою анимацию на виду, а не прятаться за шапкой). Поэтому sticky теперь на ВСЁМ блоке
+     #gameHeader целиком (шапка + имя + тема + полоска), а не на одной верхней строке.
+  */
+  #gameHeader { position: sticky; top: 0; z-index: 4; background: var(--bg); padding-top: 0.6rem; }
   #gameTopRow {
     display: flex; align-items: center; justify-content: space-between;
     gap: 0.5rem; row-gap: 0.4rem; margin-bottom: 0.75rem; flex-wrap: wrap;
@@ -286,7 +304,21 @@
   }
   #controls button.btn-visible { opacity: 1; transform: translateY(0); }
   #controls button:hover { filter: brightness(1.12); }
-  .ended { text-align: center; color: var(--text-dim); margin-bottom: 0.25rem; }
+  /* Кнопка, а не просто текст — люди инстинктивно нажимают на "История завершена." (она стоит рядом
+     с настоящей кнопкой "Поделиться" и выглядит так же кликабельно), раньше в ответ ничего не
+     происходило и это читалось как баг. Теперь нажатие сразу возвращает в меню — то же самое, что и
+     так происходит само через несколько секунд, просто без ожидания.
+     Селектор "#controls button.ended" (не просто ".ended") — это ЦЕЛЕНАПРАВЛЕННО специфичнее, чем
+     "#controls button" выше: без этого общее правило (сплошной цветной фон + прозрачность 0 до
+     .btn-visible) побеждало бы по специфичности ID-селектора, и кнопка выглядела бы как обычная
+     цветная кнопка да ещё и оставалась полностью невидимой (opacity:0), пока JS не добавит
+     .btn-visible — что забыли сделать именно для неё при первой версии правки. */
+  #controls button.ended {
+    display: block; width: 100%; text-align: center; color: var(--text-dim);
+    margin-bottom: 0.25rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; font-family: inherit; font-size: 1rem; cursor: pointer; padding: 0.7rem 1rem;
+  }
+  #controls button.ended:hover { border-color: var(--accent); color: var(--accent); }
   .donate-banner {
     display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -327,23 +359,26 @@
   <a id="aboutLink" href="about.html">О проекте / связаться с нами</a>
 
   <div id="game" class="hidden">
-    <div id="gameTopRow">
-      <button id="btnExit"></button>
-      <div id="topRight">
-        <button id="btnPause" title="Пауза">⏸</button>
-        <button id="btnMute" title="Звук"></button>
+    <div id="gameHeader">
+      <div id="gameTopRow">
+        <button id="btnExit"></button>
+        <div id="topRight">
+          <button id="btnPause" title="Пауза">⏸</button>
+          <button id="btnMute" title="Звук"></button>
+          <button id="btnOfflineDownload" class="hidden"></button>
+        </div>
       </div>
-    </div>
-    <div id="storyTitle"></div>
-    <div id="storyTheme"></div>
-    <div class="faith-track-wrap">
-      <div class="faith-track"><div id="faithFill" class="faith-fill"></div></div>
-      <div id="faithArrow" class="faith-arrow"></div>
-    </div>
-    <div class="faith-labels" id="faithLabels">
-      <button type="button" class="heart-label heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#e2574c" stroke="#10171c" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text"></span></button>
-      <div id="progress"></div>
-      <button type="button" class="heart-label heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#fdf6ec"/></svg><span class="heart-text"></span></button>
+      <div id="storyTitle"></div>
+      <div id="storyTheme"></div>
+      <div class="faith-track-wrap">
+        <div class="faith-track"><div id="faithFill" class="faith-fill"></div></div>
+        <div id="faithArrow" class="faith-arrow"></div>
+      </div>
+      <div class="faith-labels" id="faithLabels">
+        <button type="button" class="heart-label heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#e2574c" stroke="#10171c" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text"></span></button>
+        <div id="progress"></div>
+        <button type="button" class="heart-label heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#fdf6ec"/></svg><span class="heart-text"></span></button>
+      </div>
     </div>
     <div id="feed"></div>
     <div id="pauseHint">⏸ Пауза — нажмите, чтобы продолжить</div>
@@ -359,13 +394,13 @@
   </div>
 </main>
 
-<script src="engine.js?v=20260721"></script>
-<script src="i18n.js?v=20260721"></script>
-<script src="content-ru.js?v=20260721"></script>
-<script src="content-en.js?v=20260721"></script>
-<script src="content-es.js?v=20260721"></script>
-<script src="content-zh.js?v=20260721"></script>
-<script src="content-hi.js?v=20260721"></script>
-<script src="app.js?v=20260721"></script>
+<script src="engine.js?v=20260730"></script>
+<script src="i18n.js?v=20260730"></script>
+<script src="content-ru.js?v=20260730"></script>
+<script src="content-en.js?v=20260730"></script>
+<script src="content-es.js?v=20260730"></script>
+<script src="content-zh.js?v=20260730"></script>
+<script src="content-hi.js?v=20260730"></script>
+<script src="app.js?v=20260730"></script>
 </body>
 </html>

@@ -17,12 +17,22 @@ const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
 const AUDIO_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
   ? 'https://faithchoice.net/audio' : 'audio';
 
+const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const Filesystem = isNative ? window.Capacitor.Plugins.Filesystem : null;
+// Каталог 'DATA' — приватное постоянное хранилище приложения (в отличие от 'CACHE' его не подчищает
+// система при нехватке места) — то, что человек явно скачал "для офлайн", не должно пропадать само.
+const OFFLINE_DIR = 'DATA';
+
 let story = null;
 let currentKey = null; // ключ текущего персонажа — нужен, чтобы отметить историю пройденной по достижении финала
 let totalSteps = 5; // пересчитывается под конкретную историю в startStory()
 let soundOn = localStorage.getItem('soundOn') !== '0';
 let audioCtx = null;
-let currentAudio = null; // <audio>, которым сейчас управляют пауза/мьют — ссылка на активно звучащую сцену
+// Один и тот же <audio>-элемент переиспользуется на все сцены и все истории подряд (не пересоздаётся
+// в playPart) — пересоздание нового элемента под каждую реплику вызывало короткий щелчок при
+// инициализации нового аудио-трека на Android, особенно заметный сразу после выбора (когда следующая
+// сцена начинает звучать почти одновременно с окончанием анимации стрелочки к сердцу).
+let currentAudio = new Audio();
 
 // Для новых посетителей без сохранённого выбора языка — угадываем по языку браузера, а не жёстко
 // показываем один и тот же язык всем подряд. Домен международный (faithchoice.net), и часть аудитории
@@ -58,6 +68,7 @@ const h1El = document.getElementById('pageTitle');
 const langSwitchEl = document.getElementById('langSwitch');
 const gameTopRowEl = document.getElementById('gameTopRow');
 const topRightEl = document.getElementById('topRight');
+const offlineBtnEl = document.getElementById('btnOfflineDownload');
 
 function content() { return window.Content[lang]; }
 function t(key) { return I18N[lang][key]; }
@@ -90,8 +101,19 @@ async function startBackgroundAudioService(characterName) {
   try {
     const perm = await ForegroundService.checkPermissions();
     if (perm.display !== 'granted') await ForegroundService.requestPermissions();
+    // Без явного канала плагин создаёт уведомление с важностью по умолчанию (IMPORTANCE_DEFAULT) —
+    // а она включает звук при каждом показе, то есть при входе в каждую новую историю (пользователь
+    // услышал это как "щелчок перед самым началом истории", на разных историях, каждый раз). Свой
+    // канал с IMPORTANCE_LOW убирает звук насовсем, не трогая сам показ уведомления в шторке (он
+    // обязателен для фонового воспроизведения — см. AndroidManifest.xml).
+    await ForegroundService.createNotificationChannel({
+      id: 'faithchoice_audio',
+      name: t('title'),
+      importance: 2, // NotificationManager.IMPORTANCE_LOW — без звука
+    }).catch(() => {}); // канал мог быть создан раньше — не критично, если сам вызов не удался
     await ForegroundService.startForegroundService({
       id: 1,
+      notificationChannelId: 'faithchoice_audio',
       title: t('title'),
       body: characterName,
       smallIcon: 'ic_stat_faithchoice',
@@ -103,6 +125,171 @@ function stopBackgroundAudioService() {
   if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
   const ForegroundService = window.Capacitor.Plugins.ForegroundService;
   if (ForegroundService) ForegroundService.stopForegroundService().catch(() => {});
+}
+
+// --- Офлайн-кеш звука (только внутри Capacitor-приложения — на сайте аудио остаётся обычным
+// стримингом с того же домена, отдельный офлайн-режим для браузера не запрашивался).
+// Каждый файл кешируется под `audio-cache/<lang>/<storyKey>/<sceneId>.mp3` в OFFLINE_DIR — тем же
+// относительным путём, что и в удалённом URL, чтобы не заводить две разных схемы именования.
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function getCachedAudioUri(relPath) {
+  if (!isNative) return null;
+  try {
+    const info = await Filesystem.stat({ path: `audio-cache/${relPath}`, directory: OFFLINE_DIR });
+    // Файл физически существует, но подозрительно маленький — считаем его битым (см. MIN_AUDIO_BYTES
+    // ниже и её комментарий), а не "уже закешировано". Без этой проверки один раз испорченный файл
+    // (например, из-за старого бага) считался бы кешированным навсегда и никогда бы не перекачался.
+    if (info.size < MIN_AUDIO_BYTES) return null;
+    const { uri } = await Filesystem.getUri({ path: `audio-cache/${relPath}`, directory: OFFLINE_DIR });
+    return window.Capacitor.convertFileSrc(uri);
+  } catch {
+    return null; // файла ещё нет локально — не ошибка, просто "не закешировано"
+  }
+}
+
+async function saveAudioToCache(relPath, blob) {
+  const finalPath = `audio-cache/${relPath}`;
+  const tmpPath = `${finalPath}.tmp`;
+  try {
+    const base64 = await blobToBase64(blob);
+    // Пишем во временный файл и переименовываем в финальный только ПОСЛЕ успешной записи. Если
+    // процесс прервётся посреди записи (приложение закрыли принудительно, кончилось место) —
+    // по финальному пути останется либо старая версия файла, либо вообще ничего, но никогда —
+    // недописанный битый mp3, который потом молча притворялся бы "уже закешированным" навсегда.
+    await Filesystem.writeFile({ path: tmpPath, data: base64, directory: OFFLINE_DIR, recursive: true });
+    await Filesystem.rename({ from: tmpPath, to: finalPath, directory: OFFLINE_DIR });
+    return true;
+  } catch {
+    return false; // нет места на диске и т.п. — переживём, в следующий раз просто попробуем закешировать снова
+  }
+}
+
+// Самый маленький реальный mp3 в проекте — ~90 КБ (см. tts-audio/ru/viktor/viktor_choice1.mp3).
+// Если "скачанный" blob заметно меньше — это не короткая реплика, а пустой/битый ответ (известная
+// особенность CapacitorHttp: его fetch-шim реконструирует бинарные данные из нативного моста через
+// base64/JSON и может отдать испорченный Blob, не бросив при этом ни одной ошибки). Порог с большим
+// запасом, чтобы не забраковать случайно короткую настоящую фразу.
+const MIN_AUDIO_BYTES = 10000;
+
+// Путь к mp3 конкретной сцены для проигрывания прямо сейчас: если уже скачан локально — с диска
+// (работает без сети), иначе — качаем один раз из сети и одновременно проигрываем и кешируем на
+// будущее (а не два отдельных сетевых запроса на один и тот же файл).
+async function resolveAudioSrc(lang, storyKey, sceneId) {
+  const relPath = `${lang}/${storyKey}/${sceneId}.mp3`;
+  if (!isNative) return `${AUDIO_BASE}/${relPath}`;
+
+  const cached = await getCachedAudioUri(relPath);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`${AUDIO_BASE}/${relPath}`);
+    if (!res.ok) throw new Error('audio fetch failed: ' + res.status);
+    const blob = await res.blob();
+    if (blob.size >= MIN_AUDIO_BYTES) saveAudioToCache(relPath, blob); // не ждём — проигрывание не должно тормозить из-за записи на диск
+    return URL.createObjectURL(blob);
+  } catch {
+    return `${AUDIO_BASE}/${relPath}`; // сеть недоступна и т.п. — отдаём обычный URL, <audio> сам даст onerror
+  }
+}
+
+// Кнопка "Скачать офлайн" — заранее прогоняет через resolveAudioSrc все сцены всех переведённых
+// историй ТЕКУЩЕГО языка (не все 5 сразу — игроку нужен только тот, на котором он играет). Уже
+// закешированные файлы пропускаются (getCachedAudioUri), поэтому повторный запуск докачивает только
+// недостающее, а не всё заново.
+let offlineDownloadRunning = false;
+function getOfflineDoneLangs() {
+  try { return new Set(JSON.parse(localStorage.getItem('offlineDoneLangs') || '[]')); }
+  catch { return new Set(); }
+}
+function markOfflineDoneLang(l) {
+  const done = getOfflineDoneLangs();
+  done.add(l);
+  localStorage.setItem('offlineDoneLangs', JSON.stringify([...done]));
+}
+// Дошли до конца списка, но хотя бы один файл не скачался — не редкость на нестабильной сети.
+// Не показываем "не готово" тем же текстом, что и "ещё не пробовали" — иначе непонятно, была ли
+// вообще попытка. Живёт только в памяти (не в localStorage) — это подсказка на "прямо сейчас",
+// не долгосрочный факт о языке.
+let lastOfflineHadError = false;
+function updateOfflineBtn() {
+  if (!offlineBtnEl) return;
+  // По просьбе пользователя кнопка живёт в верхнем ряду ИСТОРИИ (рядом с паузой/звуком), а не на
+  // экране меню — не должна быть первым, что видно при открытии игры. Скрываем и на меню, и на
+  // не-нативной сборке (там нет офлайн-кеша вообще).
+  if (!isNative || gameEl.classList.contains('hidden')) { offlineBtnEl.classList.add('hidden'); return; }
+  offlineBtnEl.classList.remove('hidden');
+  // Кнопка НЕ блокируется во время закачки (в отличие от первой версии) — повторный тап должен
+  // отменять уже идущую закачку, а не быть недоступным. См. downloadOfflineForCurrentLang/offlineCancelRequested.
+  if (!offlineDownloadRunning) {
+    offlineBtnEl.textContent = getOfflineDoneLangs().has(lang) ? t('offlineDone')
+      : lastOfflineHadError ? t('offlineRetry') : t('offlineDownload');
+  }
+}
+let offlineCancelRequested = false;
+async function downloadOfflineForCurrentLang() {
+  if (offlineDownloadRunning) return;
+  offlineDownloadRunning = true;
+  offlineCancelRequested = false;
+  updateOfflineBtn();
+  const l = lang; // язык мог бы смениться посреди долгой закачки — фиксируем, на каком языке качаем
+  const data = window.Content[l]; // не content()/lang напрямую — setLang() блокирует переключение,
+  // пока идёт закачка (см. её начало), но так функция остаётся корректной и без этой защиты
+  const keys = data.CHARACTERS.map(c => c.key).filter(k => data.STORIES[k]);
+  let done = 0;
+  const total = keys.reduce((sum, k) => sum + Object.keys(data.STORIES[k].scenes).length, 0);
+  let hadError = false;
+  const failedThisRun = []; // диагностика — см. alert в конце функции
+  // ponytail: отмена проверяется МЕЖДУ файлами, не прерывает уже начатый fetch одного mp3 —
+  // файлы маленькие (≤ ~0.5 МБ), задержка до остановки не больше секунды. Если понадобится мгновенная
+  // отмена — добавить AbortController и передавать его signal в fetch ниже.
+  outer:
+  for (const key of keys) {
+    for (const sceneId of Object.keys(data.STORIES[key].scenes)) {
+      if (offlineCancelRequested) break outer;
+      const relPath = `${l}/${key}/${sceneId}.mp3`;
+      const already = await getCachedAudioUri(relPath);
+      if (!already) {
+        // На реальной мобильной сети из 399 запросов подряд один-два случайно обрываются — без
+        // повтора КАЖДЫЙ полный прогон почти гарантированно ловил бы хоть одну (каждый раз другую)
+        // случайную неудачу и никогда не доходил бы до "полностью готово". 3 попытки с паузой между
+        // ними — обычная практика для массовой докачки по нестабильной сети, не подстраховка "на всякий".
+        let ok = false;
+        let lastReason = '';
+        for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+          try {
+            const res = await fetch(`${AUDIO_BASE}/${relPath}`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            if (blob.size < MIN_AUDIO_BYTES) throw new Error('пустой/битый ответ, размер ' + blob.size + ' байт');
+            ok = await saveAudioToCache(relPath, blob);
+            if (!ok) lastReason = 'не сохранилось на диск';
+          } catch (e) { ok = false; lastReason = e.message; }
+          if (!ok && attempt < 3) await new Promise(r => setTimeout(r, 400));
+        }
+        if (!ok) { hadError = true; failedThisRun.push(`${relPath} — ${lastReason}`); }
+      }
+      done += 1;
+      if (offlineBtnEl) offlineBtnEl.textContent = t('offlineDownloading').replace('{done}', done).replace('{total}', total);
+    }
+  }
+  offlineDownloadRunning = false;
+  lastOfflineHadError = hadError;
+  // ponytail-диагностика: временный alert с точным списком причин прямо на телефоне — чтобы найти
+  // системную причину повторяющихся сбоев без подключения к компьютеру для удалённой отладки.
+  // Убрать/упростить после того, как причина будет найдена и исправлена.
+  if (hadError && !offlineCancelRequested) {
+    alert(`Не скачалось (${failedThisRun.length} из ${total}):\n` + failedThisRun.slice(0, 15).join('\n'));
+  }
+  if (!hadError && !offlineCancelRequested) markOfflineDoneLang(l);
+  updateOfflineBtn();
 }
 
 function ensureAudio() {
@@ -215,7 +402,7 @@ function updateMuteBtn() { muteBtn.textContent = soundOn ? '🔊' : '🔇'; }
 muteBtn.addEventListener('click', () => {
   soundOn = !soundOn;
   localStorage.setItem('soundOn', soundOn ? '1' : '0');
-  if (currentAudio) currentAudio.muted = !soundOn;
+  currentAudio.muted = !soundOn;
   updateMuteBtn();
 });
 updateMuteBtn();
@@ -268,12 +455,13 @@ function renderLangSwitch() {
 }
 
 function setLang(l) {
-  if (l === lang) return;
+  if (l === lang || offlineDownloadRunning) return;
   lang = l;
   localStorage.setItem('lang', lang);
   renderLangSwitch();
   applyStaticText();
   renderMenu();
+  updateOfflineBtn();
   backToMenu(); // смена языка на середине истории усложняет граф — проще вернуть в меню
 }
 
@@ -417,7 +605,8 @@ function speakAndReveal(el, parts) {
   return new Promise(resolve => {
     const cleanupClick = () => feedEl.removeEventListener('click', onFeedClick);
     const finishAll = (finalText) => {
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      currentAudio.pause();
+      if (currentAudio._blobUrl) { URL.revokeObjectURL(currentAudio._blobUrl); currentAudio._blobUrl = null; } // см. resolveAudioSrc — blob: URL для только что скачанного (не закешированного раньше) файла
       activeVoicePause = null;
       cleanupClick();
       if (myToken === revealToken) el.textContent = finalText;
@@ -439,9 +628,9 @@ function speakAndReveal(el, parts) {
     const playPart = () => {
       if (partIdx >= parts.length) { finishAll(fullText); return; }
       const part = parts[partIdx];
-      const audio = new Audio(`${AUDIO_BASE}/${lang}/${currentKey}/${part.id}.mp3`);
+      const audio = currentAudio; // переиспользуем один и тот же элемент — см. его объявление выше
       audio.muted = !soundOn;
-      currentAudio = audio;
+      const releaseBlob = () => { if (audio._blobUrl) { URL.revokeObjectURL(audio._blobUrl); audio._blobUrl = null; } };
 
       audio.ontimeupdate = () => {
         if (myToken !== revealToken || !audio.duration) return;
@@ -451,20 +640,29 @@ function speakAndReveal(el, parts) {
         el.scrollIntoView({ block: 'end' });
       };
       audio.onended = () => {
+        releaseBlob();
         if (myToken !== revealToken) return;
         prefix = prefix ? prefix + ' ' + part.text : part.text;
         el.textContent = fullText.slice(0, prefix.length);
         partIdx += 1;
         playPart();
       };
-      audio.onerror = () => { if (myToken === revealToken) fallbackFromHere(); };
+      audio.onerror = () => { releaseBlob(); if (myToken === revealToken) fallbackFromHere(); };
 
       activeVoicePause = {
         pause: () => audio.pause(),
         resume: () => audio.play().catch(fallbackFromHere),
         abandon: () => finishAll(el.textContent || ''),
       };
-      audio.play().catch(fallbackFromHere);
+      // Разрешение адреса файла (кеш на диске / скачать+закешировать / обычный URL) асинхронное —
+      // см. resolveAudioSrc. К моменту ответа игрок мог уже выйти из истории (revealToken вырос) —
+      // тогда просто не проигрываем и, если успели получить одноразовый blob:, сразу освобождаем его.
+      resolveAudioSrc(lang, currentKey, part.id).then(src => {
+        if (myToken !== revealToken) { if (src.startsWith('blob:')) URL.revokeObjectURL(src); return; }
+        if (src.startsWith('blob:')) audio._blobUrl = src;
+        audio.src = src;
+        audio.play().catch(fallbackFromHere);
+      });
     };
     playPart();
   });
@@ -508,6 +706,7 @@ function startStory(key) {
   renderProgress();
   menuEl.classList.add('hidden');
   gameEl.classList.remove('hidden');
+  updateOfflineBtn();
   gameTopRowEl.insertBefore(langSwitchEl, topRightEl); // переключатель языка переезжает между "Меню" и паузой на время истории
   fitHeartLabels(); // сердца только что стали видимыми — раньше clientWidth был 0, подгонка текста не сработала бы
   startBackgroundAudioService(character.name);
@@ -613,9 +812,11 @@ async function renderCurrent() {
     // scene.next == null — конец истории (промежуточные линейные сцены уже поглощены циклом выше,
     // сюда мы попадаем только на настоящем финале, а не на каждой сцене-мостике).
     markCompleted(currentKey);
-    controlsEl.innerHTML = `<div class="ended">${t('ended')}</div><button id="btnShare">${t('share')}</button>`;
+    controlsEl.innerHTML = `<button type="button" class="ended">${t('ended')}</button><button id="btnShare">${t('share')}</button>`;
+    const endedBtn = controlsEl.querySelector('.ended');
+    endedBtn.addEventListener('click', backToMenu);
     const shareBtn = document.getElementById('btnShare');
-    requestAnimationFrame(() => shareBtn.classList.add('btn-visible'));
+    requestAnimationFrame(() => { endedBtn.classList.add('btn-visible'); shareBtn.classList.add('btn-visible'); });
     // Кнопка "Поделиться" — без награды и отслеживания, просто готовый текст с именем персонажа и
     // тем, каким путём (свет/тьма) закончилась история у этого игрока (не всегда "светлый" —
     // берём по факту знака faith, а не считаем, что все выбирают одинаково). Ссылка ведёт прямо на
@@ -675,6 +876,7 @@ function backToMenu() {
   stopBackgroundAudioService();
   gameEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
+  updateOfflineBtn();
   basedOnEl.parentNode.insertBefore(langSwitchEl, basedOnEl); // переключатель языка возвращается под заголовок
   basedOnEl.textContent = ''; // иначе "по мотивам..." останется висеть под заголовком и в меню
   document.documentElement.style.removeProperty('--accent');
@@ -689,7 +891,12 @@ function backToMenu() {
   }
 }
 
+if (offlineBtnEl) offlineBtnEl.addEventListener('click', () => {
+  if (offlineDownloadRunning) offlineCancelRequested = true;
+  else downloadOfflineForCurrentLang();
+});
 renderLangSwitch();
 applyStaticText();
 renderMenu();
+updateOfflineBtn();
 initAgeGate();
