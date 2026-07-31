@@ -210,6 +210,36 @@
   #controls button:hover { filter: brightness(1.12); }
   .ended { text-align: center; color: var(--text-dim); margin-bottom: 0.25rem; }
   #aboutLink { display: none; }
+
+  /* Скопировано из index.html — без этого элементы #verseModal* не находятся, и document.getElementById(...)
+     .addEventListener(...) в app.js падает с ошибкой, останавливая весь остальной скрипт (включая
+     заполнение текста возрастного предупреждения и его кнопку) ещё до того, как страница успевает
+     нормально показаться. */
+  .verse-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1.2rem; }
+  .verse-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+  .verse-modal-box {
+    position: relative; max-width: 480px; width: 100%; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; padding: 1.6rem 1.8rem;
+    animation: verseIn 0.2s ease-out;
+  }
+  @keyframes verseIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  #verseModalText { margin: 0; font-size: 1.05rem; line-height: 1.6; color: var(--text); white-space: pre-line; }
+  #verseModalClose {
+    position: absolute; top: 0.6rem; right: 0.6rem; background: none; border: none; color: var(--text-dim);
+    font-size: 1.1rem; cursor: pointer; padding: 0.4rem 0.6rem; line-height: 1;
+  }
+  #verseModalClose:hover { color: var(--text); }
+  .verse-modal-box.verse-dark { background: linear-gradient(160deg, #e2574c, #b83b32); border-color: #10171c; }
+  .verse-modal-box.verse-dark #verseModalText { color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+  .verse-modal-box.verse-dark #verseModalClose { color: rgba(255,255,255,0.75); }
+  .verse-modal-box.verse-light {
+    background: radial-gradient(ellipse at 50% 0%, #fdf6ec 0%, #f3e2b8 70%, #e9d29c 100%);
+    border-color: #d8b568;
+    box-shadow: 0 0 50px 8px rgba(253, 224, 156, 0.35), inset 0 0 40px rgba(255,255,255,0.4);
+  }
+  .verse-modal-box.verse-light #verseModalText { color: #4a3a1a; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 1.15rem; }
+  .verse-modal-box.verse-light #verseModalClose { color: rgba(74,58,26,0.55); }
+  .verse-modal-box.verse-light #verseModalClose:hover { color: #4a3a1a; }
 </style>
 </head>
 <body>
@@ -256,6 +286,14 @@
     <div id="feed"></div>
     <div id="pauseHint">⏸ Пауза — нажмите, чтобы продолжить</div>
     <div id="controls"></div>
+  </div>
+
+  <div id="verseModal" class="verse-modal hidden">
+    <div id="verseModalBackdrop" class="verse-modal-backdrop"></div>
+    <div class="verse-modal-box">
+      <p id="verseModalText"></p>
+      <button type="button" id="verseModalClose">✕</button>
+    </div>
   </div>
 </main>
 
