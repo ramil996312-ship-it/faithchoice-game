@@ -71,6 +71,13 @@
     100% { background-position: 15% 10%, 85% 90%; }
   }
   main { width: 100%; max-width: 640px; }
+  /* На планшете в альбомной ориентации/десктопе фикс. 640px выглядит потерянным в пустоте по бокам
+     (особенно на экране истории, где контента мало на одном шаге) — расширяем колонку, но только с
+     этого порога и умеренно, чтобы строка текста не стала неудобно длинной для чтения. Портретный
+     планшет (~768px и уже) не трогаем — там и так выглядит нормально. */
+  @media (min-width: 820px) {
+    main { max-width: 760px; }
+  }
   h1 { font-size: 1.4rem; font-weight: normal; text-align: center; color: var(--accent); margin-bottom: 0.75rem; letter-spacing: 0.02em; }
   .hidden { display: none !important; }
 
