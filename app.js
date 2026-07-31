@@ -85,6 +85,20 @@ function markCompleted(key) {
   localStorage.setItem('completedStories', JSON.stringify([...done]));
 }
 
+// Какие концовки (light/dark) игрок уже видел у каждой истории — нужно только для утреннего
+// напоминания (см. pickReminderStory): когда все истории пройдены хотя бы раз, предлагаем ту, где
+// видели только один из двух путей, а не случайную уже полностью изученную.
+function getCompletedEndings() {
+  try { return JSON.parse(localStorage.getItem('completedEndings') || '{}'); }
+  catch { return {}; }
+}
+function markEndingSeen(key, path) {
+  const endings = getCompletedEndings();
+  if (!endings[key]) endings[key] = [];
+  if (!endings[key].includes(path)) endings[key].push(path);
+  localStorage.setItem('completedEndings', JSON.stringify(endings));
+}
+
 exitBtn.addEventListener('click', backToMenu);
 
 // --- Звук: предзаписанная озвучка (mp3, Google Cloud TTS), с откатом на печать со "стрёкотом"
@@ -125,6 +139,74 @@ function stopBackgroundAudioService() {
   if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
   const ForegroundService = window.Capacitor.Plugins.ForegroundService;
   if (ForegroundService) ForegroundService.stopForegroundService().catch(() => {});
+}
+
+// --- "Начни день с 3 минут победы" — ежедневное локальное напоминание со ссылкой на одну конкретную
+// историю (не на общее меню). Без сервера-отправителя: телефон сам себе напоминает в заданное время
+// (Capacitor Local Notifications), что подходит игре — она и так работает без бэкенда.
+const LocalNotifications = isNative ? window.Capacitor.Plugins.LocalNotifications : null;
+const REMINDER_NOTIF_ID = 777;
+// _v2 — не просто 'faithchoice_reminder': тот канал уже мог создаться на телефоне при первом тесте
+// с важностью по умолчанию (без баннера), а Android не даёт менять важность существующего канала
+// программно (только сам пользователь — вручную, в настройках). Новый id гарантирует канал с нуля.
+const REMINDER_CHANNEL_ID = 'faithchoice_reminder_v2';
+const REMINDER_HOUR = 8; // 8:00 утра по местному времени телефона
+
+// Какую историю предложить в следующем напоминании: сначала по порядку первую ещё не пройденную;
+// когда пройдены все — первую пройденную, где видели только одну из двух концовок (см.
+// getCompletedEndings). null — предлагать нечего (всё пройдено, обе концовки везде увидены).
+function pickReminderStory() {
+  const data = content();
+  const completed = getCompleted();
+  const endings = getCompletedEndings();
+  for (const c of data.CHARACTERS) {
+    if (data.STORIES[c.key] && !completed.has(c.key)) return c.key;
+  }
+  for (const c of data.CHARACTERS) {
+    if (data.STORIES[c.key] && (endings[c.key] || []).length < 2) return c.key;
+  }
+  return null;
+}
+
+// Перепланирует уведомление на завтра под свежий прогресс — вызывается при каждом входе в меню
+// (см. enterApp/backToMenu), а не один раз навсегда, потому что "какая история следующая" меняется
+// по ходу игры. cancel+schedule с тем же id безопасно перезаписывает предыдущее напоминание.
+async function scheduleDailyReminder() {
+  if (!isNative || !LocalNotifications) return;
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== 'granted') {
+      const req = await LocalNotifications.requestPermissions();
+      if (req.display !== 'granted') return;
+    }
+    // importance: 4 (IMPORTANCE_HIGH) — без этого уведомление тихо оседает в списке, не всплывая
+    // баннером поверх экрана; для ежедневного напоминания, которое и должно бросаться в глаза,
+    // это осознанный выбор (в отличие от тихого канала фонового аудио — там всплывать не нужно).
+    await LocalNotifications.createChannel({ id: REMINDER_CHANNEL_ID, name: t('title'), importance: 4 }).catch(() => {});
+    await LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] });
+    const key = pickReminderStory();
+    if (!key) return; // всё пройдено полностью — рекомендовать нечего
+    const character = content().CHARACTERS.find(c => c.key === key);
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: REMINDER_NOTIF_ID,
+        channelId: REMINDER_CHANNEL_ID,
+        title: t('reminderTitle'),
+        body: t('reminderBody').replace('{name}', character.name),
+        schedule: { on: { hour: REMINDER_HOUR, minute: 0 }, allowWhileIdle: true },
+        extra: { story: key },
+      }],
+    });
+  } catch {} // нет разрешения на уведомления и т.п. — приложение просто не будет напоминать, не критично
+}
+
+// Тап по напоминанию открывает именно ту историю, что была в нём указана, а не общее меню — так же,
+// как переход по ссылке "Поделиться" (см. getSharedStoryKey), только не через URL, а через extra.
+if (isNative && LocalNotifications) {
+  LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+    const key = action.notification && action.notification.extra && action.notification.extra.story;
+    if (key && content().STORIES[key] && ageGateEl.classList.contains('hidden')) startStory(key);
+  });
 }
 
 // --- Офлайн-кеш звука (только внутри Capacitor-приложения — на сайте аудио остаётся обычным
@@ -539,6 +621,7 @@ function getSharedStoryKey() {
   return key && content().STORIES[key] ? key : null;
 }
 function enterApp() {
+  scheduleDailyReminder();
   const sharedKey = getSharedStoryKey();
   if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
 }
@@ -812,6 +895,7 @@ async function renderCurrent() {
     // scene.next == null — конец истории (промежуточные линейные сцены уже поглощены циклом выше,
     // сюда мы попадаем только на настоящем финале, а не на каждой сцене-мостике).
     markCompleted(currentKey);
+    markEndingSeen(currentKey, (story.state.faith || 0) > 0 ? 'light' : 'dark');
     controlsEl.innerHTML = `<button type="button" class="ended">${t('ended')}</button><button id="btnShare">${t('share')}</button>`;
     const endedBtn = controlsEl.querySelector('.ended');
     endedBtn.addEventListener('click', backToMenu);
@@ -874,6 +958,7 @@ function backToMenu() {
   // событий от неё не будет) — без этого промис speakAndReveal завис бы навсегда.
   if (activeVoicePause) { activeVoicePause.abandon(); activeVoicePause = null; }
   stopBackgroundAudioService();
+  scheduleDailyReminder(); // прогресс мог измениться (история пройдена) — обновить, какую предлагать завтра
   gameEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
   updateOfflineBtn();
