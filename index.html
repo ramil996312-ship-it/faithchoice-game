@@ -152,10 +152,18 @@
   .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.35; }
 
   #game { position: relative; }
+  /* Единственный акцент в духе "старого блокнота", без переделки всей палитры/шрифта (см. обсуждение
+     с пользователем) — бейдж "по мотивам реальной истории" оформлен как маленькая печать: свой
+     фиксированный "чернильный" оттенок (не зависит от темы — настоящая печать тоже не меняет цвет
+     от освещения комнаты), скруглённая рамка, лёгкий наклон. Работает одинаково на всех 5 языках,
+     т.к. это только рамка/цвет вокруг обычного переведённого текста, не отдельный шрифт. */
   #basedOnBadge {
-    text-align: center; font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--text-dim); margin-bottom: 0.25rem; min-height: 1em;
+    display: block; width: fit-content; margin: 0 auto 0.5rem;
+    text-align: center; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;
+    color: #a8734a; border: 1px solid currentColor; border-radius: 999px;
+    padding: 0.3rem 0.9rem; min-height: 1em; transform: rotate(-1.4deg);
   }
+  #basedOnBadge:empty { border-color: transparent; padding: 0.3rem 0; }
   #storyTitle { font-size: 1.2rem; color: var(--accent); text-align: center; letter-spacing: 0.02em; }
   #storyTheme { font-size: 0.85rem; color: var(--text-dim); text-align: center; margin-bottom: 0.75rem; }
 
