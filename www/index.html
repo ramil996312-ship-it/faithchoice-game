@@ -95,12 +95,24 @@
   #ageGate h2 { margin: 0 0 0.6rem; font-size: 1.1rem; color: var(--accent); font-weight: normal; }
   #ageGate p { margin: 0 0 1rem; font-size: 0.9rem; color: var(--text-soft); }
   #ageGate button {
-    background: var(--accent); color: var(--btn-text); border: none; border-radius: 6px;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 80%, white 20%) 0%,
+      var(--accent) 55%,
+      color-mix(in srgb, var(--accent) 82%, black 18%) 100%);
+    color: var(--btn-text); border: none; border-radius: 8px;
     padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer; width: 100%;
-    box-shadow: var(--shadow-sm); transition: filter 0.15s, box-shadow 0.2s, transform 0.15s;
+    box-shadow:
+      0 3px 0 color-mix(in srgb, var(--accent) 55%, black 45%),
+      var(--shadow-md),
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -3px 4px rgba(0,0,0,0.2);
+    transition: filter 0.15s, box-shadow 0.12s, transform 0.12s;
   }
-  #ageGate button:hover { filter: brightness(1.12); box-shadow: var(--shadow-md); }
-  #ageGate button:active { transform: translateY(1px); box-shadow: var(--shadow-sm); }
+  #ageGate button:hover { filter: brightness(1.06); }
+  #ageGate button:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 transparent, inset 0 2px 5px rgba(0,0,0,0.3);
+  }
 
   #langSwitch { display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 1.5rem; }
   .lang-btn {
@@ -121,14 +133,31 @@
   #btnOfflineDownload:hover { color: var(--accent); opacity: 1; }
 
   #menu { display: grid; gap: 0.75rem; }
+  /* Карточка истории оформлена как обложка маленькой книги — тот же принцип, что и раньше (левая
+     цветная полоса + тень), просто усилен: полоса-"корешок" толще, рядом с ней тонкая линия-биговка
+     (как сгиб между корешком и обложкой), справа внутренняя тень имитирует торец страниц. Сами цвета
+     (surface/border/accent) не тронуты — только форма. */
   .card {
     display: flex; align-items: center; gap: 0.9rem; width: 100%; text-align: left;
-    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    border-radius: 8px; color: inherit; font-family: inherit; padding: 1rem 1.1rem; cursor: pointer;
-    box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    background: var(--surface); border: 1px solid var(--border); border-left: 7px solid var(--accent);
+    border-radius: 3px 9px 9px 3px; color: inherit; font-family: inherit; padding: 1rem 1.1rem 1rem 1.3rem;
+    cursor: pointer; position: relative;
+    box-shadow: var(--shadow-sm), inset -8px 0 12px -10px rgba(0,0,0,0.5);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
   }
-  .card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  .card:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+  .card::after {
+    content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px;
+    background: rgba(0,0,0,0.18); pointer-events: none;
+  }
+  :root[data-theme="light"] .card::after { background: rgba(0,0,0,0.1); }
+  .card:hover {
+    border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: var(--shadow-md), inset -8px 0 12px -10px rgba(0,0,0,0.5);
+  }
+  .card:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm), inset -8px 0 12px -10px rgba(0,0,0,0.5);
+  }
   .card-soon { opacity: 0.55; }
   .card-done { opacity: 0.72; }
   .icon-badge {
@@ -196,11 +225,13 @@
   #btnPause:hover, #btnMute:hover { opacity: 1; }
   #btnExit {
     flex: none; background: var(--surface); border: 1.5px solid var(--accent);
-    color: var(--accent); border-radius: 6px; font-family: inherit; font-size: 0.85rem; font-weight: bold;
+    color: var(--accent); border-radius: 8px; font-family: inherit; font-size: 0.85rem; font-weight: bold;
     cursor: pointer; opacity: 1; padding: 0.35rem 0.7rem;
-    box-shadow: var(--shadow-sm); transition: background 0.15s, color 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 0 var(--accent), var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: background 0.15s, color 0.15s, box-shadow 0.12s, transform 0.12s;
   }
-  #btnExit:hover { background: var(--accent); color: var(--btn-text); box-shadow: var(--shadow-md); }
+  #btnExit:hover { background: var(--accent); color: var(--btn-text); }
+  #btnExit:active { transform: translateY(2px); box-shadow: 0 0 0 var(--accent), inset 0 2px 4px rgba(0,0,0,0.25); }
 
   .faith-track-wrap { position: relative; margin-bottom: 1.25rem; }
   .faith-track {
@@ -326,22 +357,40 @@
   #pauseHint.pause-visible { display: block; }
   .line {
     background: var(--surface); border-left: 3px solid var(--accent);
-    padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.6rem;
-    min-height: 1.5em; box-shadow: var(--shadow-sm);
+    padding: 0.75rem 1rem; border-radius: 3px 8px 8px 3px; margin-bottom: 0.6rem;
+    min-height: 1.5em; box-shadow: var(--shadow-sm), inset -6px 0 10px -9px rgba(0,0,0,0.45);
     opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease;
   }
   .line-visible { opacity: 1; transform: translateY(0); }
   #controls { display: flex; flex-direction: column; gap: 0.5rem; }
+  /* Настоящая объёмная (3D) кнопка, не просто плоский цвет с тенью: градиент имитирует выпуклую
+     поверхность (светлее сверху, темнее снизу), сплошная цветная "ступенька" снизу — как физический
+     край кнопки, а внутренние тени сверху/снизу — блик и лёгкое затемнение выпуклости. При нажатии
+     кнопка "вдавливается": ступенька почти пропадает, кнопка опускается на её место (translateY),
+     внутренняя тень становится вдавленной. Сам цвет (--accent) не меняется, только форма/объём. */
   #controls button {
-    background: var(--accent); color: var(--btn-text); border: none; border-radius: 6px;
-    padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer; filter: brightness(1);
-    box-shadow: var(--shadow-sm);
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 80%, white 20%) 0%,
+      var(--accent) 55%,
+      color-mix(in srgb, var(--accent) 82%, black 18%) 100%);
+    color: var(--btn-text); border: none; border-radius: 8px;
+    padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer;
+    box-shadow:
+      0 3px 0 color-mix(in srgb, var(--accent) 55%, black 45%),
+      var(--shadow-md),
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -3px 4px rgba(0,0,0,0.2);
     opacity: 0; transform: translateY(6px);
-    transition: opacity 0.3s ease, transform 0.2s ease, filter 0.15s, box-shadow 0.2s;
+    transition: opacity 0.3s ease, transform 0.12s ease, box-shadow 0.12s, filter 0.15s;
   }
   #controls button.btn-visible { opacity: 1; transform: translateY(0); }
-  #controls button:hover { filter: brightness(1.12); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-  #controls button:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+  #controls button:hover { filter: brightness(1.06); }
+  #controls button:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 0 0 color-mix(in srgb, var(--accent) 55%, black 45%),
+      inset 0 2px 5px rgba(0,0,0,0.3);
+  }
   /* Кнопка, а не просто текст — люди инстинктивно нажимают на "История завершена." (она стоит рядом
      с настоящей кнопкой "Поделиться" и выглядит так же кликабельно), раньше в ответ ничего не
      происходило и это читалось как баг. Теперь нажатие сразу возвращает в меню — то же самое, что и
@@ -354,10 +403,15 @@
   #controls button.ended {
     display: block; width: 100%; text-align: center; color: var(--text-dim);
     margin-bottom: 0.25rem; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; font-family: inherit; font-size: 1rem; cursor: pointer; padding: 0.7rem 1rem;
+    border-radius: 8px; font-family: inherit; font-size: 1rem; cursor: pointer; padding: 0.7rem 1rem;
+    box-shadow: 0 3px 0 var(--border), var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: border-color 0.15s, color 0.15s, box-shadow 0.12s, transform 0.12s;
   }
-  #controls button.ended:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-  #controls button.ended:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+  #controls button.ended:hover { border-color: var(--accent); color: var(--accent); }
+  #controls button.ended:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 var(--border), inset 0 2px 4px rgba(0,0,0,0.25);
+  }
   .donate-banner {
     display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
