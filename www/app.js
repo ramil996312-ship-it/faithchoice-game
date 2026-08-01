@@ -825,6 +825,12 @@ function startStory(key) {
   renderProgress();
   menuEl.classList.add('hidden');
   if (menuProgressEl) menuProgressEl.classList.add('hidden');
+  // "Раскрытие обложки" — remove+reflow+add форсирует переигровку CSS-анимации даже если класс уже
+  // был на элементе с прошлой истории (просто повторный .add на уже присутствующий класс её не
+  // запустит заново без сброса). Тот же приём, что и в pulseHeart/showChoiceArrow.
+  gameEl.classList.remove('opening');
+  void gameEl.offsetWidth;
+  gameEl.classList.add('opening');
   gameEl.classList.remove('hidden');
   updateOfflineBtn();
   gameTopRowEl.insertBefore(langSwitchEl, topRightEl); // переключатель языка переезжает между "Меню" и паузой на время истории

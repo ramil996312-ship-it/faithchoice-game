@@ -140,7 +140,7 @@
   .card {
     display: flex; align-items: center; gap: 0.9rem; width: 100%; text-align: left;
     background: var(--surface); border: 1px solid var(--border); border-left: 7px solid var(--accent);
-    border-radius: 3px 9px 9px 3px; color: inherit; font-family: inherit; padding: 1rem 1.1rem 1rem 1.3rem;
+    border-radius: 3px 9px 4px 3px; color: inherit; font-family: inherit; padding: 1rem 1.1rem 1rem 1.3rem;
     cursor: pointer; position: relative;
     box-shadow: var(--shadow-sm), inset -8px 0 12px -10px rgba(0,0,0,0.5);
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
@@ -150,6 +150,16 @@
     background: rgba(0,0,0,0.18); pointer-events: none;
   }
   :root[data-theme="light"] .card::after { background: rgba(0,0,0,0.1); }
+  /* Загнутый уголок страницы — самый узнаваемый признак "это книга/бумага", не просто плоская
+     карточка. Треугольник цвета фона (то, что "под" карточкой) в углу создаёт иллюзию отогнутого
+     края листа; тень снизу-слева от треугольника — будто он приподнят и отбрасывает тень на страницу. */
+  .card-icon { z-index: 1; } /* поверх уголка, если тот случайно перекроет край при узкой карточке */
+  .card::before {
+    content: ''; position: absolute; right: 0; bottom: 0; width: 20px; height: 20px;
+    background: var(--bg); clip-path: polygon(100% 0, 0% 100%, 100% 100%);
+    filter: drop-shadow(-1.5px -1.5px 2px rgba(0,0,0,0.4));
+    pointer-events: none;
+  }
   .card:hover {
     border-color: var(--accent); transform: translateY(-2px);
     box-shadow: var(--shadow-md), inset -8px 0 12px -10px rgba(0,0,0,0.5);
@@ -181,6 +191,14 @@
   .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.35; }
 
   #game { position: relative; }
+  /* Раскрытие "обложки" при входе в историю — играет один раз, только когда JS добавляет класс
+     .opening в startStory() (не на каждую смену сцены, только на самый первый показ этой истории).
+     transform-origin сверху — экран будто раскрывается вниз, как обложка книги. */
+  #game.opening { animation: bookOpen 0.45s ease-out; transform-origin: top center; }
+  @keyframes bookOpen {
+    from { opacity: 0; transform: scaleY(0.82) translateY(10px); }
+    to { opacity: 1; transform: scaleY(1) translateY(0); }
+  }
   /* Единственный акцент в духе "старого блокнота", без переделки всей палитры/шрифта (см. обсуждение
      с пользователем) — бейдж "по мотивам реальной истории" оформлен как маленькая печать: свой
      фиксированный "чернильный" оттенок (не зависит от темы — настоящая печать тоже не меняет цвет
@@ -356,10 +374,16 @@
   }
   #pauseHint.pause-visible { display: block; }
   .line {
-    background: var(--surface); border-left: 3px solid var(--accent);
-    padding: 0.75rem 1rem; border-radius: 3px 8px 8px 3px; margin-bottom: 0.6rem;
+    background: var(--surface); border-left: 3px solid var(--accent); position: relative;
+    padding: 0.75rem 1rem; border-radius: 3px 8px 3px 3px; margin-bottom: 0.6rem;
     min-height: 1.5em; box-shadow: var(--shadow-sm), inset -6px 0 10px -9px rgba(0,0,0,0.45);
     opacity: 0; transform: translateY(8px); transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .line::before {
+    content: ''; position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
+    background: var(--bg); clip-path: polygon(100% 0, 0% 100%, 100% 100%);
+    filter: drop-shadow(-1px -1px 1.5px rgba(0,0,0,0.35));
+    pointer-events: none;
   }
   .line-visible { opacity: 1; transform: translateY(0); }
   #controls { display: flex; flex-direction: column; gap: 0.5rem; }
