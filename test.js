@@ -6,6 +6,24 @@ const { I18N } = require('./i18n.js');
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const CONTENT = Object.fromEntries(LANGS.map(l => [l, require(`./content-${l}.js`)]));
 
+// Обходит ВСЕ концовки истории (не только крайние светлый/тёмный пути выше) и возвращает итоговый
+// faith каждой. app.js определяет "светлая"/"тёмная" концовка строго по знаку faith (`faith > 0 ?
+// 'light' : 'dark'`) — при faith === 0 это молча трактуется как "тёмная", хотя ни один выбор игрока
+// туда не вёл. Защита на будущее: ни у одной концовки faith не должен быть равен ровно 0.
+function allEndingFaiths(data, id = data.start, faith = 0, seen = new Set(), out = []) {
+  if (seen.has(id)) return out; // циклов в валидном графе быть не должно — просто не зацикливаемся
+  const scene = data.scenes[id];
+  if (!scene) return out;
+  const nextSeen = new Set(seen).add(id);
+  const branches = (scene.choices && scene.choices.length) ? scene.choices : [scene];
+  for (const branch of branches) {
+    const delta = (branch.effects && branch.effects.faith) || 0;
+    if (branch.next == null) out.push(faith + delta);
+    else allEndingFaiths(data, branch.next, faith + delta, nextSeen, out);
+  }
+  return out;
+}
+
 for (const l of LANGS) {
   assert.ok(I18N[l], `нет строк интерфейса для языка "${l}"`);
   const { CHARACTERS, STORIES } = CONTENT[l];
@@ -49,6 +67,10 @@ for (const l of LANGS) {
     assert.ok(darkSteps < 100, `[${l}] история "${key}" (тёмный путь) не завершилась за разумное число шагов`);
     assert.ok(darkScene.next == null && !(darkScene.choices && darkScene.choices.length), `[${l}] история "${key}" (тёмный путь) не дошла до финальной сцены`);
     assert.ok((darkStory.state.faith || 0) < 0, `[${l}] история "${key}": выбор "тёмного" пути должен давать отрицательный faith`);
+
+    for (const f of allEndingFaiths(data)) {
+      assert.notStrictEqual(f, 0, `[${l}] история "${key}": концовка с faith === 0 — app.js молча посчитает её "тёмной" без причины`);
+    }
   }
 }
 

@@ -1,10 +1,8 @@
 // 中文内容(简体)。索尼娅至伟强 + 瑞安的完整故事(id 0-12);其余角色的菜单信息已翻译,故事文本待补充。
 // 注意:此翻译由 AI 生成,涉及信仰与敏感话题,正式对外使用前建议请母语者校对。
 (function () {
-  const SONYA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-9.3-9.1C1.2 7.6 3 4.3 6.5 4.3c2 0 3.4 1.1 4.1 2.4.2.4.7.4.9 0 .7-1.3 2.1-2.4 4.1-2.4 3.5 0 5.3 3.3 3.8 6.6C19 15.7 12 20 12 20z"/></svg>';
-
   const CHARACTERS = [
-    { id: 0, key: 'sonya',  name: '索尼娅', gender: 'ж', theme: '在晚期堕胎中幸存,身有残疾,后被收养', color: '#ea8853', icon: SONYA_ICON },
+    { id: 0, key: 'sonya',  name: '索尼娅', gender: 'ж', theme: '在晚期堕胎中幸存,身有残疾,后被收养', color: '#ea8853' },
     { id: 1, key: 'nastya', name: '静雯', gender: 'ж', theme: '在种族屠杀中幸存,饶恕了杀害家人的凶手', color: '#e4243b' },
     { id: 2, key: 'liza',   name: '丽华',   gender: 'ж', theme: '曾被信任的人虐待;追求正义与饶恕', color: '#397ec6' },
     { id: 3, key: 'timur',  name: '天宇', gender: 'м', theme: '帮派头目,后成为传道人', color: '#e46128' },

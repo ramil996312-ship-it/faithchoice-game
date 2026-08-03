@@ -1,10 +1,8 @@
 // Contenido en español. Historias completas: Sonya a Víctor + Ruslan (id 0-12). El resto del menú está
 // traducido, sus historias aún están pendientes.
 (function () {
-  const SONYA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-9.3-9.1C1.2 7.6 3 4.3 6.5 4.3c2 0 3.4 1.1 4.1 2.4.2.4.7.4.9 0 .7-1.3 2.1-2.4 4.1-2.4 3.5 0 5.3 3.3 3.8 6.6C19 15.7 12 20 12 20z"/></svg>';
-
   const CHARACTERS = [
-    { id: 0, key: 'sonya',  name: 'Sonya',  gender: 'ж', theme: 'sobrevivió a un aborto tardío, discapacidad, adopción', color: '#ea8853', icon: SONYA_ICON },
+    { id: 0, key: 'sonya',  name: 'Sonya',  gender: 'ж', theme: 'sobrevivió a un aborto tardío, discapacidad, adopción', color: '#ea8853' },
     { id: 1, key: 'nastya', name: 'Clara', gender: 'ж', theme: 'sobrevivió a un genocidio/masacre, perdonó a los asesinos de su familia', color: '#e4243b' },
     { id: 2, key: 'liza',   name: 'Raquel',   gender: 'ж', theme: 'abusada por alguien en quien confiaba; justicia y perdón', color: '#397ec6' },
     { id: 3, key: 'timur',  name: 'Marcos',  gender: 'м', theme: 'líder de pandilla convertido en predicador', color: '#e46128' },

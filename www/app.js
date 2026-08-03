@@ -68,6 +68,7 @@ const h1El = document.getElementById('pageTitle');
 const langSwitchEl = document.getElementById('langSwitch');
 const gameTopRowEl = document.getElementById('gameTopRow');
 const topRightEl = document.getElementById('topRight');
+const mainEl = document.querySelector('main');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
 const menuProgressEl = document.getElementById('menuProgress');
 const reminderRowEl = document.getElementById('reminderRow');
@@ -351,7 +352,7 @@ async function downloadOfflineForCurrentLang() {
   let done = 0;
   const total = keys.reduce((sum, k) => sum + Object.keys(data.STORIES[k].scenes).length, 0);
   let hadError = false;
-  const failedThisRun = []; // диагностика — см. alert в конце функции
+  const failedThisRun = []; // диагностика — см. console.warn в конце функции
   // ponytail: отмена проверяется МЕЖДУ файлами, не прерывает уже начатый fetch одного mp3 —
   // файлы маленькие (≤ ~0.5 МБ), задержка до остановки не больше секунды. Если понадобится мгновенная
   // отмена — добавить AbortController и передавать его signal в fetch ниже.
@@ -387,11 +388,11 @@ async function downloadOfflineForCurrentLang() {
   }
   offlineDownloadRunning = false;
   lastOfflineHadError = hadError;
-  // ponytail-диагностика: временный alert с точным списком причин прямо на телефоне — чтобы найти
-  // системную причину повторяющихся сбоев без подключения к компьютеру для удалённой отладки.
-  // Убрать/упростить после того, как причина будет найдена и исправлена.
+  // Пользователю ошибку уже сообщает сама кнопка (см. updateOfflineBtn → t('offlineRetry')),
+  // локализованно на его языке. Точные причины — только в консоли, для удалённой диагностики,
+  // без блокирующего alert() на чужом языке для не-русскоязычных пользователей.
   if (hadError && !offlineCancelRequested) {
-    alert(`Не скачалось (${failedThisRun.length} из ${total}):\n` + failedThisRun.slice(0, 15).join('\n'));
+    console.warn(`Офлайн-загрузка: не скачалось ${failedThisRun.length} из ${total}`, failedThisRun);
   }
   if (!hadError && !offlineCancelRequested) markOfflineDoneLang(l);
   updateOfflineBtn();
@@ -419,6 +420,10 @@ function playBlip() {
 }
 
 // Светлая/тёмная тема — переключатель сохраняется в localStorage, как lang и soundOn.
+// Обычный emoji-полумесяц 🌙 слишком похож на исламский полумесяц-символ — рисуем вместо
+// него полную луну (круг с кратерами), чтобы не было двусмысленного прочтения в приложении
+// на христианскую тематику.
+const MOON_ICON = '<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1.6" fill="var(--bg)"/><circle cx="15.2" cy="13.5" r="1.3" fill="var(--bg)"/><circle cx="10.5" cy="16" r="1" fill="var(--bg)"/></svg>';
 const themeBtn = document.getElementById('btnTheme');
 let theme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
 
@@ -481,7 +486,7 @@ function readableTextOn(hex) {
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme;
-  themeBtn.textContent = theme === 'light' ? '☀️' : '🌙';
+  themeBtn.innerHTML = theme === 'light' ? '☀️' : MOON_ICON;
   // Перекрасить уже показанные цвета персонажей под новую тему без перезагрузки страницы.
   if (!menuEl.classList.contains('hidden')) renderMenu();
   if (!gameEl.classList.contains('hidden') && currentKey) {
@@ -517,10 +522,15 @@ updateMuteBtn();
 // renderCurrent() — пауза относится к текущей реплике, а не ко всей игре разом.
 let isPaused = false;
 // Иконка ⏸/▶ в углу слишком маленькая и легко теряется, особенно на телефоне — если пользователь случайно
+// Emoji-глифы ⏸/▶ на некоторых телефонах (напр. MIUI) рисуются собственным "зашитым" цветом (обычно
+// ярко-оранжевым), который CSS не может перекрасить — из-за этого кнопка паузы иногда становилась
+// оранжевой вместо цвета персонажа. Рисуем вместо них свои одноцветные SVG-иконки (currentColor).
+const PAUSE_ICON = '<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const PLAY_ICON = '<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 // поставил паузу одним касанием по ленте во время печати/озвучки, экран просто "замирает" без кнопки
 // "Далее", и это выглядит как баг, а не как пауза. Явная подсказка прямо в ленте делает это однозначным.
 function updatePauseBtn() {
-  pauseBtn.textContent = isPaused ? '▶' : '⏸';
+  pauseBtn.innerHTML = isPaused ? PLAY_ICON : PAUSE_ICON;
   pauseHintEl.classList.toggle('pause-visible', isPaused);
 }
 pauseHintEl.addEventListener('click', () => { if (isPaused) togglePause(); });
@@ -563,6 +573,7 @@ function setLang(l) {
   if (l === lang || offlineDownloadRunning) return;
   lang = l;
   localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang; // иначе скринридер/перенос слов остаются настроены на русский для всех остальных языков
   renderLangSwitch();
   applyStaticText();
   renderMenu();
@@ -636,6 +647,8 @@ function applyStaticText() {
   document.getElementById('ageGateBody').textContent = t('ageGateBody');
   document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
   if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
+  muteBtn.title = t('soundLabel');
+  document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
 }
 
 // Ссылка на конкретную историю (?story=marat из кнопки "Поделиться") — чтобы можно было отправить
@@ -777,15 +790,19 @@ function speakAndReveal(el, parts) {
 
 function renderMenu() {
   const completed = getCompleted();
+  // По умолчанию — раскрытая книга с венцом сверху (образ "герой веры"), одного золотого цвета
+  // для всех историй (--icon-gold, не зависит от личного цвета персонажа — как оклад иконы).
+  // c.icon по-прежнему можно задать отдельно на персонажа, если для кого-то понадобится исключение.
+  const DEFAULT_ICON = `<svg viewBox="0 -24 100 124" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" style="color:var(--icon-gold)"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg>`;
   menuEl.innerHTML = content().CHARACTERS.map(c => {
-    const icon = c.icon || `<span class="monogram">${c.name[0]}</span>`;
+    const icon = c.icon || DEFAULT_ICON;
     const available = !!content().STORIES[c.key];
     const done = completed.has(c.key);
     const badge = done ? `<span class="icon-badge" title="${t('storyDone')}">✓</span>` : '';
     return `<button class="card${available ? '' : ' card-soon'}${done ? ' card-done' : ''}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
        <div class="card-icon">${icon}${badge}</div>
        <div class="card-text">
-         <div class="card-name">${c.gender === 'ж' ? '♀' : '♂'} ${c.name}</div>
+         <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
          <div class="card-theme">${c.theme}</div>
        </div>
      </button>`;
@@ -815,6 +832,7 @@ function startStory(key) {
   story = new Engine.Story(content().STORIES[key]);
   totalSteps = Engine.pathLength(content().STORIES[key]);
   basedOnEl.textContent = t('basedOnTrue');
+  basedOnEl.classList.add('hidden'); // на время чтения скрыта — освобождает строку под заголовком
   titleEl.textContent = character.name;
   themeEl.textContent = character.theme;
   const startColor = colorForTheme(character.color);
@@ -833,7 +851,8 @@ function startStory(key) {
   gameEl.classList.add('opening');
   gameEl.classList.remove('hidden');
   updateOfflineBtn();
-  gameTopRowEl.insertBefore(langSwitchEl, topRightEl); // переключатель языка переезжает между "Меню" и паузой на время истории
+  langSwitchEl.classList.add('hidden'); // на время чтения скрыт — освобождает место в верхней панели, переключить язык всё равно нельзя без выхода в меню
+  topRightEl.appendChild(themeBtn); // кнопка темы переезжает в один ряд с паузой/звуком на время чтения
   fitHeartLabels(); // сердца только что стали видимыми — раньше clientWidth был 0, подгонка текста не сработала бы
   startBackgroundAudioService(character.name);
   renderCurrent();
@@ -858,9 +877,16 @@ function renderFaith() {
 const ARROW_SVG = '<svg viewBox="0 0 10 14"><path d="M1,1 L8,7 L1,13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function renderProgress() {
   const step = story ? story.history.length : 0;
+  // pathLength() (engine.js) оценивает totalSteps по первой ветке выбора (choices[0].next) — для
+  // историй, где более короткая ветка реально завершает историю раньше (см. "sergey": один из
+  // выборов ведёт к концовке в обход второго choice), story.history.length никогда не достигает
+  // totalSteps, и последний кружок прогресса не загорается, хотя история уже закончена. Поэтому
+  // при фактическом завершении (текущая сцена — концовка) просто зажигаем все кружки.
+  const scene = story ? story.current() : null;
+  const ended = !!scene && scene.next == null && !(scene.choices && scene.choices.length);
   progressEl.innerHTML = Array.from({ length: totalSteps }, (_, i) => {
-    const on = i <= step;
-    return `<span class="dot" style="color:var(--accent);opacity:${on ? 1 : 0.32}">${ARROW_SVG}</span>`;
+    const on = ended || i <= step;
+    return `<span class="dot" style="color:var(--icon-gold);opacity:${on ? 1 : 0.32}">${ARROW_SVG}</span>`;
   }).join('');
 }
 
@@ -1006,6 +1032,9 @@ function backToMenu() {
   menuEl.classList.remove('hidden');
   updateOfflineBtn();
   basedOnEl.parentNode.insertBefore(langSwitchEl, basedOnEl); // переключатель языка возвращается под заголовок
+  langSwitchEl.classList.remove('hidden');
+  document.body.insertBefore(themeBtn, mainEl); // кнопка темы возвращается в свой обычный плавающий угол
+  basedOnEl.classList.remove('hidden');
   basedOnEl.textContent = ''; // иначе "по мотивам..." останется висеть под заголовком и в меню
   document.documentElement.style.removeProperty('--accent');
   document.documentElement.style.removeProperty('--btn-text');
@@ -1023,6 +1052,7 @@ if (offlineBtnEl) offlineBtnEl.addEventListener('click', () => {
   if (offlineDownloadRunning) offlineCancelRequested = true;
   else downloadOfflineForCurrentLang();
 });
+document.documentElement.lang = lang; // язык мог быть взят из localStorage/браузера, а не только выбран через setLang()
 renderLangSwitch();
 applyStaticText();
 renderMenu();
