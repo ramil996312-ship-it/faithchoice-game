@@ -25,6 +25,13 @@ android/app/.cxx/
 android/local.properties
 android/captures/
 *.apk
+*.aab
+
+# Ключ подписи релиза — СЕКРЕТ. Если потерять его без бэкапа — обновить опубликованное
+# в Google Play приложение станет невозможно. Держите отдельную резервную копию (не только здесь).
+android/keystore/
+android/keystore.properties
+keystore-backup-COPY-ME/
 
 # iOS (Capacitor), если/когда появится
 ios/App/build/
