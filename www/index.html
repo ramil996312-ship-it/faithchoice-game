@@ -275,7 +275,13 @@
   /* flex-wrap выше — подстраховка на случай переполнения (узкий экран/крупный системный шрифт):
      ряд переносится на вторую строку целиком, а не обрезает кнопку звука за пределы экрана без
      возможности до неё дотянуться — это и произошло в Capacitor-приложении на реальном телефоне
-     (в браузере эффективная ширина чуть шире, там не проявлялось). */
+     (в браузере эффективная ширина чуть шире, там не проявлялось). Оказалось, что перенос —
+     совсем не редкий случай: "← Меню" + "Скачать офлайн" вдвоём уже занимают всю ширину на многих
+     реальных телефонах, так что #topRight (пауза/звук/тема) переносится на вторую строку почти
+     всегда, а не только при увеличенном системном шрифте. margin-bottom выше рассчитан на ОДНУ
+     строку — при переносе на две он утягивает эмблему книги (#storyEmblem) прямо в перенесённые
+     иконки. .wrapped ниже включается через JS (fixHeaderWrap в app.js), когда перенос обнаружен. */
+  #gameTopRow.wrapped { margin-bottom: 0.4rem; }
   #gameTopRow #langSwitch { margin-bottom: 0; }
   /* Кнопка офлайн-загрузки — прямой сосед "Меню" (не внутри #topRight с иконками), чтобы при
      переполнении узкого экрана переносилась на уровень "Меню", а не пряталась второй строкой
@@ -619,12 +625,19 @@
     padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom));
   }
   .tab-btn {
-    flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+    position: relative; flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
     background: none; border: none; color: var(--text-soft); font-family: inherit; font-size: 0.7rem;
-    cursor: pointer; padding: 0.3rem 0.5rem;
+    cursor: pointer; padding: 0.3rem 0.5rem; transition: color 0.15s;
   }
-  .tab-btn svg { width: 22px; height: 22px; }
-  .tab-btn.active { color: var(--icon-gold); }
+  .tab-btn svg { width: 22px; height: 22px; transition: transform 0.15s; }
+  /* Активная вкладка: золотой цвет + подчёркивающая полоска снизу + жирный текст — иначе разница
+     между активной и неактивной вкладкой была только в оттенке текста, почти незаметно. */
+  .tab-btn.active { color: var(--icon-gold); font-weight: bold; }
+  .tab-btn.active svg { transform: scale(1.08); }
+  .tab-btn.active::after {
+    content: ''; position: absolute; bottom: -0.1rem; left: 50%; transform: translateX(-50%);
+    width: 1.6rem; height: 3px; border-radius: 2px; background: var(--icon-gold);
+  }
   #profileScreen { display: flex; flex-direction: column; gap: 1rem; }
   .profile-head {
     display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border);

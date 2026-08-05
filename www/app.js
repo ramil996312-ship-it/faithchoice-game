@@ -91,6 +91,7 @@ const exitBtn = document.getElementById('btnExit');
 const h1El = document.getElementById('pageTitle');
 const langSwitchEl = document.getElementById('langSwitch');
 const gameTopRowEl = document.getElementById('gameTopRow');
+const gameTopLeftEl = document.getElementById('gameTopLeft');
 const topRightEl = document.getElementById('topRight');
 const mainEl = document.querySelector('main');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
@@ -925,6 +926,19 @@ function updateMenuProgress(completed) {
   menuProgressEl.classList.remove('hidden');
 }
 
+// #gameTopRow тянет эмблему книги вверх отрицательным margin-bottom (см. index.html), рассчитанным
+// на одну строку. Если "← Меню"+"Скачать офлайн" слева и пауза/звук/тема справа не помещаются в
+// одну строку и переносятся — тянуть вверх больше нельзя, иначе эмблема наезжает на перенесённые
+// иконки (реальный баг, найденный пользователем на телефоне). .wrapped переключает margin на
+// безопасный. Не CSS-only, потому что перенос зависит от языка (длина текста кнопок) и системного
+// шрифта — заранее медиа-запросом не предсказать, нужно измерить фактическую раскладку.
+function fixHeaderWrap() {
+  if (!gameTopLeftEl || !topRightEl || !gameTopRowEl) return;
+  const wrapped = topRightEl.getBoundingClientRect().top - gameTopLeftEl.getBoundingClientRect().top > 4;
+  gameTopRowEl.classList.toggle('wrapped', wrapped);
+}
+window.addEventListener('resize', fixHeaderWrap);
+
 function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
   ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
@@ -957,6 +971,7 @@ function startStory(key) {
   updateOfflineBtn();
   langSwitchEl.classList.add('hidden'); // на время чтения скрыт — освобождает место в верхней панели, переключить язык всё равно нельзя без выхода в меню
   topRightEl.appendChild(themeBtn); // кнопка темы переезжает в один ряд с паузой/звуком на время чтения
+  fixHeaderWrap(); // проверить перенос строки ДО эмблемы книги ниже — см. комментарий у функции
   fitHeartLabels(); // сердца только что стали видимыми — раньше clientWidth был 0, подгонка текста не сработала бы
   startBackgroundAudioService(character.name);
   renderCurrent();
