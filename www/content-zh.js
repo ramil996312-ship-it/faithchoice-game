@@ -3,7 +3,7 @@
 (function () {
   const CHARACTERS = [
     { id: 0, key: 'sonya',  name: '索尼娅', gender: 'ж', theme: '在晚期堕胎中幸存,身有残疾,后被收养', color: '#ea8853' },
-    { id: 1, key: 'nastya', name: '静雯', gender: 'ж', theme: '在种族屠杀中幸存,饶恕了杀害家人的凶手', color: '#e4243b' },
+    { id: 1, key: 'nastya', name: '静雯', gender: 'ж', theme: '在种族屠杀中幸存,饶恕了杀害家人的凶手', color: '#c2555f' },
     { id: 2, key: 'liza',   name: '丽华',   gender: 'ж', theme: '曾被信任的人虐待;追求正义与饶恕', color: '#397ec6' },
     { id: 3, key: 'timur',  name: '天宇', gender: 'м', theme: '帮派头目,后成为传道人', color: '#e46128' },
     { id: 4, key: 'sergey', name: '俊杰', gender: 'м', theme: '曾被俘虏和折磨,患有创伤后应激障碍和酗酒,饶恕了折磨他的人', color: '#9ac639' },

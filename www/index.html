@@ -187,20 +187,33 @@
     box-shadow: 0 0 0 2px rgba(76,217,100,0.35), 0 1px 4px rgba(0,0,0,0.4);
   }
   .card-icon {
-    flex: none; width: 3.4rem; height: 3.4rem; color: var(--accent);
+    flex: none; width: 2.1rem; height: 2.1rem; color: var(--accent);
     display: flex; align-items: center; justify-content: center;
-    position: relative;
+    position: relative; margin-left: auto; align-self: center;
     background: var(--bg);
-    border: 3px solid var(--icon-gold);
+    border: 2px solid var(--icon-gold);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 55%, black);
   }
   .card-icon svg { width: 100%; height: 100%; }
+  .card-photo {
+    flex: none; width: 3.6rem; height: 3.6rem; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; position: relative;
+    color: var(--text-soft);
+  }
+  .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-photo svg { width: 42%; height: 42%; opacity: 0.5; }
+  #continueCard .card-photo { width: 4.4rem; height: 4.4rem; border-radius: 10px; }
   .monogram {
     width: 100%; height: 100%; border-radius: 50%; border: 1.5px solid var(--accent);
     display: flex; align-items: center; justify-content: center; font-size: 1.15rem; color: var(--accent);
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
   }
   .card-name { font-size: 1.3rem; color: var(--accent); }
+  .card-cat {
+    font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: bold;
+    color: var(--accent); margin-bottom: 0.15rem;
+  }
   .gender-symbol { font-size: 2em; vertical-align: middle; line-height: 1; display: inline-block; }
   .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.35; }
 
@@ -225,17 +238,17 @@
     padding: 0.3rem 0.9rem; min-height: 1em; transform: rotate(-1.4deg);
   }
   #basedOnBadge:empty { border-color: transparent; padding: 0.3rem 0; }
-  #storyEmblem { display: flex; justify-content: center; margin-bottom: 0.35rem; }
+  #storyEmblem { display: flex; justify-content: center; margin-bottom: 0.15rem; }
   #storyEmblem .emblem-frame {
-    position: relative; width: 5.6rem; height: 5.6rem;
+    position: relative; width: 3.6rem; height: 3.6rem;
     display: flex; align-items: center; justify-content: center;
     background: var(--bg);
     border: 3px solid var(--icon-gold);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 55%, black);
   }
-  #storyEmblem svg { width: 3.4rem; height: 3.4rem; }
-  #storyTitle { font-size: 1.2rem; color: var(--accent); text-align: center; letter-spacing: 0.02em; }
-  #storyTheme { font-size: 0.85rem; color: var(--text-dim); text-align: center; margin-bottom: 0.4rem; }
+  #storyEmblem svg { width: 2.2rem; height: 2.2rem; }
+  #storyTitle { font-size: 1.1rem; color: var(--accent); text-align: center; letter-spacing: 0.02em; }
+  #storyTheme { font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-bottom: 0.2rem; }
 
   #progress { display: flex; justify-content: center; align-items: center; gap: 0.4rem; flex-shrink: 1; min-width: 0; }
   .dot { width: 17px; height: 22px; transition: color 0.3s, opacity 0.3s; flex-shrink: 0; }
@@ -249,12 +262,12 @@
      #gameHeader целиком (шапка + имя + тема + полоска), а не на одной верхней строке.
   */
   #gameHeader {
-    position: sticky; top: 0; z-index: 4; background: var(--bg); padding-top: 0.4rem;
-    padding-bottom: 0.35rem; border-bottom: 1px solid color-mix(in srgb, var(--icon-gold) 35%, transparent);
+    position: sticky; top: 0; z-index: 4; background: var(--bg); padding-top: 0.2rem;
+    padding-bottom: 0.2rem; border-bottom: 1px solid color-mix(in srgb, var(--icon-gold) 35%, transparent);
   }
   #gameTopRow {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 0.5rem; row-gap: 0.4rem; margin-bottom: 0.4rem; flex-wrap: wrap;
+    gap: 0.5rem; row-gap: 0.4rem; margin-bottom: -2.6rem; flex-wrap: wrap; position: relative; z-index: 1;
     padding: 0 0.3rem;
   }
   /* flex-wrap выше — подстраховка на случай переполнения (узкий экран/крупный системный шрифт):
@@ -434,6 +447,16 @@
     pointer-events: none;
   }
   .line-visible { opacity: 1; transform: translateY(0); }
+  .scene-photo {
+    width: 100%; aspect-ratio: 4/3; border-radius: 8px; overflow: hidden; margin-bottom: 0.25rem;
+    border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    background:
+      radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent) 55%, white 15%), transparent 60%),
+      radial-gradient(circle at 75% 80%, color-mix(in srgb, var(--accent) 70%, black 10%), transparent 65%),
+      var(--track-bg);
+  }
+  .scene-photo img { width: 100%; height: 100%; object-fit: contain; object-position: center center; display: block; }
+  .scene-step-num { font-size: 2.2rem; font-weight: bold; color: var(--text-soft); opacity: 0.35; line-height: 1; margin: -0.3rem 0 -0.2rem; }
   #controls { display: flex; flex-direction: column; gap: 0.5rem; }
   /* Настоящая объёмная (3D) кнопка, не просто плоский цвет с тенью: градиент имитирует выпуклую
      поверхность (светлее сверху, темнее снизу), сплошная цветная "ступенька" снизу — как физический
@@ -448,7 +471,7 @@
     color: var(--btn-text); border: none; border-radius: 8px;
     padding: 0.7rem 1rem; font-family: inherit; font-size: 1rem; cursor: pointer;
     box-shadow:
-      0 3px 0 color-mix(in srgb, var(--accent) 55%, black 45%),
+      0 4px 0 color-mix(in srgb, var(--accent) 55%, black 45%),
       var(--shadow-md),
       inset 0 1px 0 rgba(255,255,255,0.45),
       inset 0 -3px 4px rgba(0,0,0,0.2);
@@ -458,7 +481,7 @@
   #controls button.btn-visible { opacity: 1; transform: translateY(0); }
   #controls button:hover { filter: brightness(1.06); }
   #controls button:active {
-    transform: translateY(3px);
+    transform: translateY(4px);
     box-shadow:
       0 0 0 color-mix(in srgb, var(--accent) 55%, black 45%),
       inset 0 2px 5px rgba(0,0,0,0.3);
@@ -508,6 +531,73 @@
     text-align: center; font-size: 0.8rem; color: var(--text-dim);
     margin-bottom: 1rem; letter-spacing: 0.02em;
   }
+  /* Карточка "Продолжить" — та же книгиль-эстетика, что и .card (корешок-полоса, загнутый
+     уголок), но крупнее и с собственной 3D-кнопкой-CTA внутри, а не в списке контролов. */
+  #continueCard {
+    display: flex; align-items: center; gap: 1rem; width: 100%; text-align: left;
+    background: var(--surface); border: 1px solid var(--border); border-left: 7px solid var(--icon-gold);
+    border-radius: 3px 9px 4px 3px; padding: 1.1rem 1.2rem 1.1rem 1.4rem; margin-bottom: 1.1rem;
+    position: relative; box-shadow: var(--shadow-sm), inset -8px 0 12px -10px rgba(0,0,0,0.5);
+  }
+  #continueCard::after {
+    content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,0.18); pointer-events: none;
+  }
+  #continueCard .continue-icon { flex: none; }
+  .continue-text { flex: 1; min-width: 0; }
+  .continue-label {
+    font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--icon-gold);
+    font-weight: bold; margin-bottom: 0.2rem;
+  }
+  .continue-text .card-name { margin-top: 0.1rem; }
+  .continue-text .card-theme { margin-bottom: 0.7rem; }
+  .continue-cta {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 80%, white 20%) 0%,
+      var(--accent) 55%,
+      color-mix(in srgb, var(--accent) 82%, black 18%) 100%);
+    color: var(--btn-text); border: none; border-radius: 8px;
+    padding: 0.55rem 1rem; font-family: inherit; font-size: 0.9rem; font-weight: bold; cursor: pointer; white-space: nowrap;
+    box-shadow:
+      0 4px 0 color-mix(in srgb, var(--accent) 55%, black 45%),
+      var(--shadow-sm),
+      inset 0 1px 0 rgba(255,255,255,0.45),
+      inset 0 -3px 4px rgba(0,0,0,0.2);
+    transition: filter 0.15s, box-shadow 0.12s, transform 0.12s;
+  }
+  .continue-cta:hover { filter: brightness(1.06); }
+  .continue-cta:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 transparent, inset 0 2px 5px rgba(0,0,0,0.3);
+  }
+  @media (max-width: 420px) {
+    #continueCard { flex-direction: column; align-items: flex-start; }
+    .continue-cta { width: 100%; }
+  }
+  #catChips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .cat-chip { white-space: nowrap; }
+  .cat-chip {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--surface) 92%, white 8%) 0%,
+      var(--surface) 60%,
+      color-mix(in srgb, var(--surface) 88%, black 12%) 100%);
+    border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 999px; padding: 0.4rem 1rem; font-family: inherit; font-size: 0.82rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--border), var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.15);
+    transform: translateY(0);
+    transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.12s, transform 0.12s;
+  }
+  .cat-chip:hover { border-color: var(--accent); color: var(--text); }
+  .cat-chip:active { transform: translateY(3px); box-shadow: 0 0 0 var(--border), inset 0 2px 4px rgba(0,0,0,0.25); }
+  .cat-chip.active {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--icon-gold) 80%, white 20%) 0%,
+      var(--icon-gold) 55%,
+      color-mix(in srgb, var(--icon-gold) 82%, black 18%) 100%);
+    border-color: var(--icon-gold); color: var(--btn-text); font-weight: bold;
+    box-shadow: 0 3px 0 color-mix(in srgb, var(--icon-gold) 55%, black 45%), var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .cat-chip.active:active { box-shadow: 0 0 0 color-mix(in srgb, var(--icon-gold) 55%, black 45%), inset 0 2px 4px rgba(0,0,0,0.25); }
   /* ~ (любой следующий сиблинг), не + (сразу следующий) — видны только вместе с меню, не поверх игры/гейта. */
   #menu.hidden ~ #aboutLink { display: none; }
   #menu.hidden ~ #reminderRow { display: none; }
@@ -519,6 +609,64 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
     color: var(--text); font-family: inherit; padding: 0.15rem 0.3rem;
   }
+  body { padding-bottom: 4.6rem; } /* место под фикс. таб-бар, чтобы контент не залезал под него */
+  #tabBar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; justify-content: center; gap: 0; background: var(--surface);
+    border-top: 1px solid var(--border); box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
+    padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom));
+  }
+  .tab-btn {
+    flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+    background: none; border: none; color: var(--text-soft); font-family: inherit; font-size: 0.7rem;
+    cursor: pointer; padding: 0.3rem 0.5rem;
+  }
+  .tab-btn svg { width: 22px; height: 22px; }
+  .tab-btn.active { color: var(--icon-gold); }
+  #profileScreen { display: flex; flex-direction: column; gap: 1rem; }
+  .profile-head {
+    display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem 1.1rem; box-shadow: var(--shadow-sm);
+  }
+  .profile-head h2 { margin: 0; font-size: 1.15rem; color: var(--accent); font-weight: normal; }
+  .profile-head p { margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--text-dim); }
+  .profile-photo { width: 3.8rem; height: 3.8rem; border-radius: 50%; }
+  .profile-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .profile-stat { background: var(--surface); padding: 0.9rem 1rem; text-align: center; }
+  .profile-stat .num { font-size: 1.9rem; font-weight: bold; color: var(--icon-gold); line-height: 1; }
+  .profile-stat .label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.3rem; }
+  .profile-section-title { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.4rem; }
+  .profile-bar { display: flex; height: 1.6rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+  .profile-bar-light, .profile-bar-dark { display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: bold; color: #fff; }
+  .profile-bar-light { background: #34c9a3; }
+  .profile-bar-dark { background: #6B2737; }
+  .profile-bar-labels { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
+  .profile-heart { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 3.4rem; height: 3.2rem; flex-shrink: 0; }
+  .profile-heart .heart-text { font-size: 0.78rem; }
+  .profile-list-item {
+    display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .profile-list-item:last-child { border-bottom: none; }
+  .profile-dot { width: 4px; border-radius: 2px; align-self: stretch; flex: none; }
+  .profile-dot.light { background: #34c9a3; }
+  .profile-dot.dark { background: #6B2737; }
+  .profile-dot.progress { background: var(--text-soft); opacity: 0.5; }
+  .profile-item-text { flex: 1; min-width: 0; }
+  .profile-item-text .name { font-size: 1rem; color: var(--text); font-weight: bold; }
+  .profile-item-text .meta { font-size: 0.78rem; color: var(--text-dim); }
+  .profile-item-status { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-soft); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; }
+  .profile-item-status .mini-heart { width: 0.85rem; height: 0.8rem; flex-shrink: 0; }
+  .profile-heart-sm { width: 3rem; height: 2.8rem; flex-shrink: 0; }
+  .profile-heart-sm .heart-text { font-size: 0.72rem; }
+  .profile-empty { color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 1rem 0; }
+  .profile-cta {
+    background: var(--surface); border: 1px solid var(--icon-gold); color: var(--icon-gold);
+    border-radius: 8px; padding: 0.8rem 1rem; font-family: inherit; font-size: 0.95rem; font-weight: bold;
+    cursor: pointer; text-align: center;
+  }
+  .profile-cta:hover { background: var(--icon-gold); color: var(--btn-text); }
 </style>
 </head>
 <body>
@@ -535,13 +683,19 @@
     <button id="btnAgeGateContinue"></button>
   </div>
 
-  <div id="menuProgress" class="hidden"></div>
-  <div id="menu" class="hidden"></div>
-  <div id="reminderRow" class="hidden">
-    <label for="reminderTimeInput" id="reminderLabel"></label>
-    <input type="time" id="reminderTimeInput">
+  <div id="storiesScreen">
+    <div id="menuProgress" class="hidden"></div>
+    <div id="continueCard" class="hidden"></div>
+    <div id="catChips" class="hidden"></div>
+    <div id="menu" class="hidden"></div>
+    <div id="reminderRow" class="hidden">
+      <label for="reminderTimeInput" id="reminderLabel"></label>
+      <input type="time" id="reminderTimeInput">
+    </div>
+    <a id="aboutLink" href="about.html">О проекте / связаться с нами</a>
   </div>
-  <a id="aboutLink" href="about.html">О проекте / связаться с нами</a>
+
+  <div id="profileScreen" class="hidden"></div>
 
   <div id="game" class="hidden">
     <div id="gameHeader">
@@ -581,6 +735,17 @@
     </div>
   </div>
 </main>
+
+<nav id="tabBar" class="hidden">
+  <button type="button" class="tab-btn" data-tab="stories">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5c-.8 0-1.5-.7-1.5-1.5v-13z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5v-13z"/></svg>
+    <span id="tabStoriesLabel"></span>
+  </button>
+  <button type="button" class="tab-btn" data-tab="profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1-3.8 4.2-6 7.5-6s6.5 2.2 7.5 6"/></svg>
+    <span id="tabProfileLabel"></span>
+  </button>
+</nav>
 
 <script src="engine.js?v=20260730"></script>
 <script src="i18n.js?v=20260730"></script>

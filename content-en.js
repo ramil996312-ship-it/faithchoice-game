@@ -2,7 +2,7 @@
 (function () {
   const CHARACTERS = [
     { id: 0, key: 'sonya',  name: 'Sonya',  gender: 'ж', theme: 'survived a late-term abortion, disability, adoption', color: '#ea8853' },
-    { id: 1, key: 'nastya', name: 'Claire', gender: 'ж', theme: "survived a genocide/massacre, forgave her family's killers", color: '#e4243b' },
+    { id: 1, key: 'nastya', name: 'Claire', gender: 'ж', theme: "survived a genocide/massacre, forgave her family's killers", color: '#c2555f' },
     { id: 2, key: 'liza',   name: 'Rachel',   gender: 'ж', theme: 'abused by someone she trusted; justice and forgiveness', color: '#397ec6' },
     { id: 3, key: 'timur',  name: 'Marcus',  gender: 'м', theme: 'gang leader turned preacher', color: '#e46128' },
     { id: 4, key: 'sergey', name: 'Michael', gender: 'м', theme: 'captivity and torture, PTSD and alcoholism, forgave his torturer', color: '#9ac639' },

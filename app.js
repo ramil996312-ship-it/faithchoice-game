@@ -8,6 +8,30 @@ const DONATE_BANNER_ENABLED = false;
 const DONATE_URL = '#';
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
+const PHOTO_PLACEHOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-6 6"/></svg>';
+
+// Тематические категории для фильтра в меню — привязаны к ключу персонажа (не зависят от языка,
+// т.к. ключи одинаковы во всех content-<lang>.js). Сгруппированы по сути пути героя, не по деталям сюжета.
+const CATEGORIES = ['all', 'persecution', 'conversion', 'dependency', 'crime', 'abuse', 'disability', 'grief', 'prolife', 'fame', 'missions', 'specialFamily'];
+const CATEGORY_I18N_KEY = {
+  all: 'catAll', persecution: 'catPersecution', conversion: 'catConversion',
+  dependency: 'catDependency', crime: 'catCrime', abuse: 'catAbuse', disability: 'catDisability',
+  grief: 'catGrief', prolife: 'catProlife', fame: 'catFame',
+  missions: 'catMissions', specialFamily: 'catSpecialFamily',
+};
+const CATEGORY_BY_KEY = {
+  sonya: 'prolife', nastya: 'abuse', liza: 'abuse', timur: 'crime', sergey: 'dependency',
+  maksim: 'crime', kristina: 'conversion', polina: 'prolife', marina: 'abuse', alina: 'dependency',
+  zara: 'conversion', viktor: 'conversion', ruslan: 'conversion', roman: 'crime', anton: 'dependency',
+  pavel: 'grief', yulia: 'conversion', oksana: 'dependency', vika: 'abuse', tanya: 'grief',
+  galya: 'fame', denis: 'abuse', ignat: 'persecution', artem: 'fame', grisha: 'crime',
+  stas: 'specialFamily', zhenya: 'grief', inna: 'specialFamily', karina: 'abuse', darya: 'fame',
+  milana: 'grief', egor: 'fame', vadim: 'crime', kostya: 'disability', marat: 'crime',
+  yuriy: 'abuse', olya: 'disability', natasha: 'grief', lena: 'prolife', vera: 'specialFamily',
+  alya: 'fame', nina: 'grief', lyuda: 'specialFamily', andrey: 'persecution', gleb: 'dependency',
+  oleg: 'grief', kirill: 'dependency', vlad: 'crime', kolya: 'conversion', bogdan: 'abuse',
+};
+let activeCategory = 'all';
 // /var/www/faithchoice.net/audio/<lang>/<storyKey>/<sceneId>.mp3 — предзаписанная озвучка (Google Cloud TTS).
 // Внутри Capacitor-приложения страница грузится из локального бандла (file://-подобная схема), а не с
 // сайта — относительный путь 'audio' там ни на что не сослался бы. 500 МБ файлов сознательно НЕ зашиты
@@ -71,6 +95,11 @@ const topRightEl = document.getElementById('topRight');
 const mainEl = document.querySelector('main');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
 const menuProgressEl = document.getElementById('menuProgress');
+const continueCardEl = document.getElementById('continueCard');
+const catChipsEl = document.getElementById('catChips');
+const storiesScreenEl = document.getElementById('storiesScreen');
+const profileScreenEl = document.getElementById('profileScreen');
+const tabBarEl = document.getElementById('tabBar');
 const reminderRowEl = document.getElementById('reminderRow');
 const reminderLabelEl = document.getElementById('reminderLabel');
 const reminderTimeInputEl = document.getElementById('reminderTimeInput');
@@ -88,6 +117,26 @@ function markCompleted(key) {
   if (done.has(key)) return;
   done.add(key);
   localStorage.setItem('completedStories', JSON.stringify([...done]));
+  try {
+    const at = JSON.parse(localStorage.getItem('completedAt') || '{}');
+    at[key] = Date.now();
+    localStorage.setItem('completedAt', JSON.stringify(at));
+  } catch {}
+}
+function getCompletedAt() {
+  try { return JSON.parse(localStorage.getItem('completedAt') || '{}'); }
+  catch { return {}; }
+}
+// Сколько раз слушатель выбирал светлый/тёмный путь — считаем по каждому реальному клику на
+// развилке (не только по финалу истории), это и есть "твои решения" в профиле.
+function getChoiceCounts() {
+  try { return Object.assign({ light: 0, dark: 0 }, JSON.parse(localStorage.getItem('choiceCounts') || '{}')); }
+  catch { return { light: 0, dark: 0 }; }
+}
+function bumpChoiceCount(dir) {
+  const counts = getChoiceCounts();
+  counts[dir] = (counts[dir] || 0) + 1;
+  localStorage.setItem('choiceCounts', JSON.stringify(counts));
 }
 
 // Какие концовки (light/dark) игрок уже видел у каждой истории — нужно только для утреннего
@@ -649,6 +698,9 @@ function applyStaticText() {
   if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
   muteBtn.title = t('soundLabel');
   document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
+  document.getElementById('tabStoriesLabel').textContent = t('tabStories');
+  document.getElementById('tabProfileLabel').textContent = t('tabProfile');
+  if (!profileScreenEl.classList.contains('hidden')) renderProfile();
 }
 
 // Ссылка на конкретную историю (?story=marat из кнопки "Поделиться") — чтобы можно было отправить
@@ -659,6 +711,8 @@ function getSharedStoryKey() {
 }
 function enterApp() {
   scheduleDailyReminder();
+  tabBarEl.classList.remove('hidden');
+  showScreen('stories');
   const sharedKey = getSharedStoryKey();
   if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
 }
@@ -788,23 +842,70 @@ function speakAndReveal(el, parts) {
   });
 }
 
+const DEFAULT_ICON = `<svg viewBox="0 -24 100 124" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" style="color:var(--icon-gold)"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg>`;
+
+// Карточка "Продолжить" — то же визуальное семейство, что и обычная .card (левая полоса-корешок,
+// загнутый уголок), но крупнее и с кнопкой-CTA — ведёт на следующую рекомендуемую историю
+// (переиспользуем pickReminderStory: первая непройденная по порядку, иначе — та, где видели
+// только одну из двух концовок). Скрыта, если рекомендовать нечего (коллекция полностью пройдена).
+function renderContinueCard() {
+  if (!continueCardEl) return;
+  const key = pickReminderStory();
+  if (!key) { continueCardEl.classList.add('hidden'); return; }
+  const c = content().CHARACTERS.find(ch => ch.key === key);
+  const icon = c.icon || DEFAULT_ICON;
+  continueCardEl.classList.remove('hidden');
+  continueCardEl.style.setProperty('--accent', colorForTheme(c.color));
+  const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
+  continueCardEl.innerHTML = `
+    <div class="card-photo" style="background:${atmoBg}"><img src="photos/${key}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
+    <div class="continue-text">
+      <div class="continue-label">${t('continueLabel')}</div>
+      <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
+      <div class="card-theme">${c.theme}</div>
+      <button type="button" class="continue-cta">${t('continueCta')}</button>
+    </div>
+    <div class="card-icon continue-icon">${icon}</div>`;
+  continueCardEl.querySelector('.continue-cta').addEventListener('click', () => startStory(key));
+}
+
+function renderCatChips() {
+  if (!catChipsEl) return;
+  catChipsEl.classList.remove('hidden');
+  catChipsEl.innerHTML = CATEGORIES.map(cat =>
+    `<button type="button" class="cat-chip${cat === activeCategory ? ' active' : ''}" data-cat="${cat}">${t(CATEGORY_I18N_KEY[cat])}</button>`
+  ).join('');
+  catChipsEl.querySelectorAll('.cat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.cat;
+      renderMenu();
+    });
+  });
+}
+
 function renderMenu() {
   const completed = getCompleted();
   // По умолчанию — раскрытая книга с венцом сверху (образ "герой веры"), одного золотого цвета
   // для всех историй (--icon-gold, не зависит от личного цвета персонажа — как оклад иконы).
   // c.icon по-прежнему можно задать отдельно на персонажа, если для кого-то понадобится исключение.
-  const DEFAULT_ICON = `<svg viewBox="0 -24 100 124" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" style="color:var(--icon-gold)"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg>`;
-  menuEl.innerHTML = content().CHARACTERS.map(c => {
+  renderContinueCard();
+  renderCatChips();
+  const chars = content().CHARACTERS.filter(c => activeCategory === 'all' || CATEGORY_BY_KEY[c.key] === activeCategory);
+  menuEl.innerHTML = chars.map(c => {
     const icon = c.icon || DEFAULT_ICON;
     const available = !!content().STORIES[c.key];
     const done = completed.has(c.key);
     const badge = done ? `<span class="icon-badge" title="${t('storyDone')}">✓</span>` : '';
+    const catLabel = t(CATEGORY_I18N_KEY[CATEGORY_BY_KEY[c.key]] || 'catAll');
+    const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
     return `<button class="card${available ? '' : ' card-soon'}${done ? ' card-done' : ''}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
-       <div class="card-icon">${icon}${badge}</div>
+       <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
        <div class="card-text">
+         <div class="card-cat">${catLabel}</div>
          <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
          <div class="card-theme">${c.theme}</div>
        </div>
+       <div class="card-icon">${icon}${badge}</div>
      </button>`;
   }).join('');
   menuEl.querySelectorAll('.card').forEach(btn => {
@@ -843,6 +944,9 @@ function startStory(key) {
   renderProgress();
   menuEl.classList.add('hidden');
   if (menuProgressEl) menuProgressEl.classList.add('hidden');
+  if (continueCardEl) continueCardEl.classList.add('hidden');
+  if (catChipsEl) catChipsEl.classList.add('hidden');
+  if (tabBarEl) tabBarEl.classList.add('hidden');
   // "Раскрытие обложки" — remove+reflow+add форсирует переигровку CSS-анимации даже если класс уже
   // был на элементе с прошлой истории (просто повторный .add на уже присутствующий класс её не
   // запустит заново без сброса). Тот же приём, что и в pulseHeart/showChoiceArrow.
@@ -920,6 +1024,16 @@ async function renderCurrent() {
   }
   const scene = story.current();
 
+  const scenePhoto = document.createElement('div');
+  scenePhoto.className = 'scene-photo';
+  scenePhoto.innerHTML = `<img src="photos/${currentKey}.jpg" alt="" data-key="${currentKey}" loading="lazy" onerror="this.style.display='none'">`;
+  feedEl.appendChild(scenePhoto);
+
+  const stepNum = document.createElement('div');
+  stepNum.className = 'scene-step-num';
+  stepNum.textContent = String((story.history.length || 0) + 1).padStart(2, '0');
+  feedEl.appendChild(stepNum);
+
   const block = document.createElement('div');
   block.className = 'line';
   feedEl.appendChild(block);
@@ -952,6 +1066,7 @@ async function renderCurrent() {
         if (dir) {
           pulseHeart(dir);
           showChoiceArrow(dir);
+          bumpChoiceCount(dir);
         }
         story.choose(i);
         renderFaith();
@@ -1022,6 +1137,7 @@ async function renderCurrent() {
 }
 
 function backToMenu() {
+  if (tabBarEl) tabBarEl.classList.remove('hidden');
   revealToken += 1; // отменяет любую ещё доигрывающую печать/озвучку прежней истории
   // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через pause(), новых
   // событий от неё не будет) — без этого промис speakAndReveal завис бы навсегда.
@@ -1053,6 +1169,102 @@ if (offlineBtnEl) offlineBtnEl.addEventListener('click', () => {
   else downloadOfflineForCurrentLang();
 });
 document.documentElement.lang = lang; // язык мог быть взят из localStorage/браузера, а не только выбран через setLang()
+
+// --- Таб-бар (Истории/Профиль) и экран профиля — статистика считается честно из того, что реально
+// сохранено локально (свои решения свет/тьма, пройденные истории), без придуманных чужих процентов.
+let activeTab = 'stories';
+function showScreen(tab) {
+  activeTab = tab;
+  storiesScreenEl.classList.toggle('hidden', tab !== 'stories');
+  profileScreenEl.classList.toggle('hidden', tab !== 'profile');
+  tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'profile') renderProfile();
+}
+tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.tab)));
+
+function formatDate(ts) {
+  try { return new Date(ts).toLocaleDateString(lang); } catch { return ''; }
+}
+
+function getProfilePhoto() { return localStorage.getItem('profilePhoto') || ''; }
+function saveProfilePhoto(dataUrl) {
+  try { localStorage.setItem('profilePhoto', dataUrl); } catch {} // квота localStorage переполнена — переживём, просто не сохранится
+  renderProfile();
+}
+function onProfilePhotoPicked(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => saveProfilePhoto(reader.result);
+  reader.readAsDataURL(file);
+}
+
+function getProfileName() { return localStorage.getItem('profileName') || ''; }
+function editProfileName() {
+  const current = getProfileName();
+  const next = window.prompt(t('profileNamePrompt'), current);
+  if (next === null) return; // отмена
+  localStorage.setItem('profileName', next.trim());
+  renderProfile();
+}
+
+function renderProfile() {
+  const completed = getCompleted();
+  const completedAt = getCompletedAt();
+  const endings = getCompletedEndings();
+  const counts = getChoiceCounts();
+  const totalDecisions = counts.light + counts.dark;
+  const lightPct = totalDecisions ? Math.round((counts.light / totalDecisions) * 100) : 50;
+  const darkPct = 100 - lightPct;
+  const totalStories = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
+
+  const rows = content().CHARACTERS
+    .filter(c => content().STORIES[c.key] && completed.has(c.key))
+    .sort((a, b) => (completedAt[b.key] || 0) - (completedAt[a.key] || 0))
+    .map(c => {
+      const path = (endings[c.key] || []).includes('dark') && !(endings[c.key] || []).includes('light') ? 'dark' : 'light';
+      const dateStr = completedAt[c.key] ? formatDate(completedAt[c.key]) : '';
+      return `<div class="profile-list-item">
+        <div class="profile-dot ${path}"></div>
+        <div class="profile-item-text"><div class="name">${c.name}</div><div class="meta">${c.theme.split(',')[0]}${dateStr ? ' · ' + dateStr : ''}</div></div>
+        <span class="profile-heart profile-heart-sm heart-${path}"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="${path === 'light' ? '#F2E8D6' : '#3B2A20'}" stroke="${path === 'light' ? '#C9A227' : '#8C6318'}" stroke-width="${path === 'light' ? '1' : '1.3'}"/></svg><span class="heart-text">${t(path)}</span></span>
+      </div>`;
+    }).join('');
+
+  const myPhoto = getProfilePhoto();
+  profileScreenEl.innerHTML = `
+    <div class="profile-head">
+      <label class="card-photo profile-photo" style="cursor:pointer;background:${myPhoto ? 'none' : 'radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--icon-gold) 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, var(--icon-gold) 70%, black 10%), transparent 65%), var(--track-bg)'}">
+        ${myPhoto ? `<img src="${myPhoto}" alt="">` : PHOTO_PLACEHOLDER_ICON}
+        <input type="file" accept="image/*" style="display:none" onchange="onProfilePhotoPicked(this)">
+      </label>
+      <div><h2 onclick="editProfileName()" style="cursor:pointer">${getProfileName() ? t('profileGreeting').replace('{name}', getProfileName()) : t('profileTitle')}</h2></div>
+    </div>
+    <div class="profile-stats">
+      <div class="profile-stat"><div class="num">${completed.size}</div><div class="label">${t('profileStoriesLabel').replace('{total}', totalStories)}</div></div>
+      <div class="profile-stat"><div class="num">${totalDecisions}</div><div class="label">${t('profileDecisionsLabel')}</div></div>
+    </div>
+    <div>
+      <div class="profile-section-title">${t('profileYourChoices')}</div>
+      <div class="profile-bar">
+        ${counts.light ? `<div class="profile-bar-light" style="width:${lightPct}%">${lightPct}%</div>` : ''}
+        ${counts.dark ? `<div class="profile-bar-dark" style="width:${darkPct}%">${darkPct}%</div>` : ''}
+        ${totalDecisions ? '' : `<div class="profile-bar-light" style="width:100%;background:var(--border);color:var(--text-dim)">—</div>`}
+      </div>
+      <div class="profile-bar-labels">
+        <span class="profile-heart heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#F2E8D6" stroke="#C9A227" stroke-width="1"/></svg><span class="heart-text">${t('light')}</span></span>
+        <span class="profile-heart heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#3B2A20" stroke="#8C6318" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text">${t('dark')}</span></span>
+      </div>
+    </div>
+    <div>
+      <div class="profile-section-title">${t('profileCompletedSection')}</div>
+      ${rows || `<div class="profile-empty">${t('profileEmpty')}</div>`}
+    </div>
+    <button type="button" class="profile-cta" id="profileShareBtn">${t('profileShare')}</button>
+  `;
+  const shareBtn = document.getElementById('profileShareBtn');
+  if (shareBtn) shareBtn.addEventListener('click', () => { window.location.href = 'share-story.html'; });
+}
 renderLangSwitch();
 applyStaticText();
 renderMenu();
