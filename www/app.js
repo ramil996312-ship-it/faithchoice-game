@@ -1024,10 +1024,15 @@ async function renderCurrent() {
   }
   const scene = story.current();
 
-  const scenePhoto = document.createElement('div');
-  scenePhoto.className = 'scene-photo';
-  scenePhoto.innerHTML = `<img src="photos/${currentKey}.jpg" alt="" data-key="${currentKey}" loading="lazy" onerror="this.style.display='none'">`;
-  feedEl.appendChild(scenePhoto);
+  // Фото персонажа — один раз на всю историю (renderCurrent идёт по нескольку раз за прохождение,
+  // на каждый переход между сценами с выбором), иначе один и тот же снимок дублировался бы перед
+  // каждым новым отрезком текста и уезжал за пределы экрана по мере роста ленты.
+  if (!feedEl.querySelector('.scene-photo')) {
+    const scenePhoto = document.createElement('div');
+    scenePhoto.className = 'scene-photo';
+    scenePhoto.innerHTML = `<img src="photos/${currentKey}.jpg" alt="" data-key="${currentKey}" loading="lazy" onerror="this.style.display='none'">`;
+    feedEl.appendChild(scenePhoto);
+  }
 
   const stepNum = document.createElement('div');
   stepNum.className = 'scene-step-num';

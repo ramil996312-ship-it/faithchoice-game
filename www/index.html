@@ -87,7 +87,9 @@
   @media (min-width: 820px) {
     main { max-width: 760px; }
   }
-  h1 { font-size: 1.7rem; font-weight: bold; text-align: center; color: var(--icon-gold); margin-top: 0; margin-bottom: 0.75rem; letter-spacing: 0.01em; }
+  /* padding-right компенсирует #btnTheme (position: fixed, справа) — без него центрированный
+     заголовок на узких телефонных экранах наезжает правым краем текста прямо на кнопку темы. */
+  h1 { font-size: 1.7rem; font-weight: bold; text-align: center; color: var(--icon-gold); margin-top: 0; margin-bottom: 0.75rem; letter-spacing: 0.01em; padding-right: 3.4rem; }
   .hidden { display: none !important; }
 
   #ageGate {
