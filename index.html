@@ -293,11 +293,15 @@
      переполнении узкого экрана переносилась на уровень "Меню", а не пряталась второй строкой
      под иконками паузы/звука вправо. */
   #gameTopLeft { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; row-gap: 0.15rem; min-width: 0; }
-  /* margin-left:auto здесь (а не только justify-content:space-between на #gameTopRow) — при переносе
-     на вторую строку #topRight остаётся там единственным элементом, а space-between в этом случае
-     прижимает одиночный элемент строки к ЛЕВОМУ краю, а не к правому. auto-margin работает верно
-     независимо от того, делит ли #topRight строку с #gameTopLeft или переносится на свою. */
-  #topRight { display: flex; align-items: center; gap: 0.3rem; flex: none; flex-wrap: wrap; row-gap: 0.15rem; max-width: 100%; margin-left: auto; }
+  /* flex-basis:100% заставляет #topRight всегда занимать всю строку целиком (переносясь на свою,
+     под #gameTopLeft) — без этого пришлось бы гадать, делит ли он строку с "Меню" или нет, а сетке
+     ниже нужна именно полная ширина, чтобы три зоны (слева/центр/справа) считались от полного ряда,
+     а не от суммарной ширины самих иконок. Внутри — grid 1fr auto 1fr: пауза+звук прижаты к левому
+     краю, эмблема строго по центру ряда (не "после иконок", а по центру всей доступной ширины),
+     тема — к правому краю. По прямой просьбе пользователя (см. скриншот). */
+  #topRight { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.3rem; flex: 1 1 100%; }
+  #topRightLeft { display: flex; align-items: center; gap: 0.3rem; justify-self: start; }
+  #topRight #storyEmblem { justify-self: center; }
   #btnPause, #btnMute {
     background: none; border: none; color: var(--accent);
     font-size: 2.2rem; cursor: pointer; opacity: 0.85; padding: 0.25rem;
@@ -315,7 +319,7 @@
      пауза/звука/эмблемы в этом же ряду. */
   #topRight #btnTheme {
     position: static; width: auto; height: auto; font-size: 1.54rem;
-    margin-left: auto; /* пауза/звук/эмблема группируются слева, тема прижимается к правому краю ряда */
+    justify-self: end; /* правая колонка сетки #topRight — см. выше */
     background: none; border: 1.5px solid var(--accent); border-radius: 50%; box-shadow: none;
     color: var(--accent); opacity: 0.85; padding: 0.21rem;
     display: flex; align-items: center; justify-content: center;
@@ -768,8 +772,10 @@
           <button id="btnOfflineDownload" class="hidden"></button>
         </div>
         <div id="topRight">
-          <button id="btnPause" title="Пауза"><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
-          <button id="btnMute" title="Звук"></button>
+          <div id="topRightLeft">
+            <button id="btnPause" title="Пауза"><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+            <button id="btnMute" title="Звук"></button>
+          </div>
           <div id="storyEmblem" aria-hidden="true"><div class="emblem-frame"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div></div>
         </div>
       </div>
