@@ -677,6 +677,26 @@ document.getElementById('verseModalClose').addEventListener('click', closeVerseM
 document.getElementById('verseModalBackdrop').addEventListener('click', closeVerseModal);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeVerseModal(); });
 
+// Постоянная кнопка "поддержать" — круглое сердце в углу (не пропадает само, в отличие от старого
+// баннера), плюс отдельное модальное окно по клику в той же тёплой золотой стилистике, что и
+// светлый библейский стих выше. DONATE_URL/DONATE_BANNER_ENABLED — см. константы в начале файла.
+const donateBtnEl = document.getElementById('btnDonate');
+const donateModalEl = document.getElementById('donateModal');
+function initDonate() {
+  if (!DONATE_BANNER_ENABLED) return;
+  donateBtnEl.classList.remove('hidden');
+  document.getElementById('donateModalText').textContent = t('donateText');
+  const cta = document.getElementById('donateModalCta');
+  cta.href = DONATE_URL;
+  cta.textContent = t('donateLink');
+}
+function closeDonateModal() { donateModalEl.classList.add('hidden'); }
+donateBtnEl.addEventListener('click', () => donateModalEl.classList.remove('hidden'));
+document.getElementById('donateModalClose').addEventListener('click', closeDonateModal);
+document.getElementById('donateModalBackdrop').addEventListener('click', closeDonateModal);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDonateModal(); });
+initDonate();
+
 // Стрелка на полоске веры в момент выбора — стартует из центра и "летит" к тому сердцу, в чью
 // сторону сдвинулся выбор: красная к тьме, зелёная к свету (см. .faith-arrow в index.html).
 const faithArrowEl = document.getElementById('faithArrow');
@@ -701,6 +721,10 @@ function applyStaticText() {
   document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
   document.getElementById('tabStoriesLabel').textContent = t('tabStories');
   document.getElementById('tabProfileLabel').textContent = t('tabProfile');
+  if (DONATE_BANNER_ENABLED) {
+    document.getElementById('donateModalText').textContent = t('donateText');
+    document.getElementById('donateModalCta').textContent = t('donateLink');
+  }
   if (!profileScreenEl.classList.contains('hidden')) renderProfile();
 }
 
@@ -1117,29 +1141,18 @@ async function renderCurrent() {
       }
     });
 
-    // Ненавязчивая просьба поддержать проект — обычно каждую 10-ю пройденную историю, не чаще (см.
-    // константу DONATE_BANNER_ENABLED вверху файла). Временно показывается после КАЖДОЙ истории —
-    // чтобы можно было увидеть баннер, не проходя 10 историй подряд. Вернуть строгий показ — заменить
-    // "true" ниже обратно на "getCompleted().size % 10 === 0".
-    let donateShown = false;
-    if (DONATE_BANNER_ENABLED && true) {
-      const banner = document.createElement('div');
-      banner.className = 'donate-banner';
-      banner.innerHTML = `<span>${t('donateText')}</span><a href="${DONATE_URL}" target="_blank" rel="noopener">${t('donateLink')}</a><button class="donate-close" aria-label="${t('exit')}">✕</button>`;
-      controlsEl.appendChild(banner);
-      banner.querySelector('.donate-close').addEventListener('click', () => banner.remove());
-      donateShown = true;
-    }
+    // Просьба поддержать проект больше не всплывает баннером после каждой истории — теперь это
+    // постоянная кнопка-сердце в углу экрана (см. initDonate() ниже), доступная всегда, а не только
+    // сразу после прохождения. Меньше навязчиво, но и не теряется через несколько секунд.
 
     // Автовозврат в меню без клика — backToMenu() сам прокручивает список к карточке только что
     // пройденной истории (см. её код), а не сбрасывает список наверх. Время увеличено с 1.6с до 7с —
-    // раньше не хватало времени даже заметить кнопку "Поделиться", не то что нажать её. Если ещё
-    // показан баннер поддержки — даём заметно больше времени (14с), чтобы успеть прочитать и его.
+    // раньше не хватало времени даже заметить кнопку "Поделиться", не то что нажать её.
     const myToken = revealToken;
     setTimeout(() => {
       if (myToken !== revealToken) return; // пользователь уже сам ушёл раньше
       backToMenu();
-    }, donateShown ? 14000 : 7000);
+    }, 7000);
   }
   controlsEl.scrollIntoView({ block: 'end', behavior: 'smooth' }); // кнопки не всегда влезают на экран без этого
 }

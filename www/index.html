@@ -393,7 +393,7 @@
   }
   @keyframes verseIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
   #verseModalText { margin: 0; font-size: 1.05rem; line-height: 1.6; color: var(--text); white-space: pre-line; }
-  #verseModalClose {
+  #verseModalClose, #donateModalClose {
     position: absolute; top: 0.6rem; right: 0.6rem; background: none; border: none; color: var(--text-dim);
     font-size: 1.1rem; cursor: pointer; padding: 0.4rem 0.6rem; line-height: 1;
   }
@@ -518,21 +518,47 @@
     transform: translateY(3px);
     box-shadow: 0 0 0 var(--border), inset 0 2px 4px rgba(0,0,0,0.25);
   }
-  .donate-banner {
-    display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 0.7rem 0.9rem; font-size: 0.85rem;
+  /* Раньше был плоский баннер, всплывавший на несколько секунд после каждой N-й истории — по
+     просьбе пользователя заменён на постоянную круглую кнопку-сердце в углу (не пропадает сама,
+     всегда доступна) + отдельное модальное окно по клику, в той же тёплой золотой стилистике,
+     что и окно светлого библейского стиха (.verse-light ниже), а не унылый текст в рамке. */
+  #btnDonate {
+    position: fixed; right: 0.8rem; bottom: calc(4.6rem + 0.8rem); z-index: 15;
+    width: 3rem; height: 3rem; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--icon-gold); color: var(--icon-gold);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 45%, black), var(--shadow-md),
+      0 0 14px color-mix(in srgb, var(--icon-gold) 40%, transparent);
+    animation: donatePulse 2.4s ease-in-out infinite;
+    transition: transform 0.15s;
   }
-  .donate-banner span { flex: 1; color: var(--text-dim); }
-  .donate-banner a {
-    color: var(--accent); font-weight: bold; text-decoration: none; white-space: nowrap;
+  #btnDonate:hover { transform: scale(1.06); }
+  #btnDonate:active { transform: scale(0.95); }
+  #btnDonate svg { width: 1.6rem; height: 1.6rem; }
+  @keyframes donatePulse {
+    0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 45%, black), var(--shadow-md), 0 0 14px color-mix(in srgb, var(--icon-gold) 40%, transparent); }
+    50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 45%, black), var(--shadow-md), 0 0 22px color-mix(in srgb, var(--icon-gold) 65%, transparent); }
   }
-  .donate-banner a:hover { text-decoration: underline; }
-  .donate-banner .donate-close {
-    background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1rem;
-    padding: 0.1rem 0.3rem; opacity: 0.7; flex: none;
+  .donate-modal-box {
+    background: radial-gradient(ellipse at 50% 0%, #fdf6ec 0%, #f3e2b8 70%, #e9d29c 100%);
+    border-color: #d8b568; text-align: center;
+    box-shadow: 0 0 50px 8px rgba(253, 224, 156, 0.35), inset 0 0 40px rgba(255,255,255,0.4);
   }
-  .donate-banner .donate-close:hover { opacity: 1; }
+  .donate-modal-box .donate-icon { color: #b8860b; margin-bottom: 0.6rem; }
+  .donate-modal-box .donate-icon svg { width: 2.6rem; height: 2.6rem; }
+  .donate-modal-box p {
+    margin: 0 0 1.1rem; color: #4a3a1a; font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic; font-size: 1.1rem; line-height: 1.55;
+  }
+  .donate-modal-box .donate-cta {
+    display: inline-block; background: linear-gradient(180deg, #d8a83a, #b8860b);
+    color: #fffbf0; font-weight: bold; text-decoration: none; border-radius: 999px;
+    padding: 0.65rem 1.6rem; box-shadow: 0 3px 0 #8a6708, 0 4px 10px rgba(0,0,0,0.25);
+    transition: transform 0.1s;
+  }
+  .donate-modal-box .donate-cta:active { transform: translateY(3px); box-shadow: 0 0 0 #8a6708; }
+  .donate-modal-box #donateModalClose { color: rgba(74,58,26,0.55); }
+  .donate-modal-box #donateModalClose:hover { color: #4a3a1a; }
   #aboutLink {
     display: block; text-align: center; margin-top: 1.5rem; color: var(--text-dim);
     text-decoration: none; font-size: 0.85rem;
@@ -759,6 +785,19 @@
     <div class="verse-modal-box">
       <p id="verseModalText"></p>
       <button type="button" id="verseModalClose">✕</button>
+    </div>
+  </div>
+
+  <button type="button" id="btnDonate" class="hidden" title="Поддержать проект">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8.5 2.5 5 6 5c2 0 3.5 1.2 4.2 2.6.4.8 1.2.8 1.6 0C12.5 6.2 14 5 16 5c3.5 0 5 3.5 3.5 7-2.5 4.65-7.5 9-7.5 9z"/></svg>
+  </button>
+  <div id="donateModal" class="verse-modal hidden">
+    <div id="donateModalBackdrop" class="verse-modal-backdrop"></div>
+    <div class="verse-modal-box donate-modal-box">
+      <div class="donate-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8.5 2.5 5 6 5c2 0 3.5 1.2 4.2 2.6.4.8 1.2.8 1.6 0C12.5 6.2 14 5 16 5c3.5 0 5 3.5 3.5 7-2.5 4.65-7.5 9-7.5 9z"/></svg></div>
+      <p id="donateModalText"></p>
+      <a id="donateModalCta" href="#" target="_blank" rel="noopener" class="donate-cta"></a>
+      <button type="button" id="donateModalClose">✕</button>
     </div>
   </div>
 </main>
