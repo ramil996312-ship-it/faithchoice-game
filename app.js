@@ -2,9 +2,11 @@
 
 const FAITH_RANGE = 30; // ponytail: под текущий разброс effects (±10..±15 на 2 выбора), для нормализации полоски
 // Баннер с просьбой поддержать проект (после каждой 10-й пройденной истории) — текст/логика готовы,
-// но выключены, пока не готова сама кнопка доната (ждёт открытия ИП, см. память проекта). Включить —
-// поставить true и вписать реальную ссылку в DONATE_URL.
-const DONATE_BANNER_ENABLED = false;
+// но по-настоящему рабочей ссылки ещё нет (ждёт открытия ИП, см. память проекта). Включено сейчас
+// только чтобы визуально посмотреть баннер — DONATE_URL всё ещё заглушка "#", никуда реально не ведёт.
+// Когда будет настоящая ссылка (или раньше решите вернуть показ на каждую 10-ю, а не каждую) —
+// поправить оба места ниже.
+const DONATE_BANNER_ENABLED = true;
 const DONATE_URL = '#';
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
@@ -1115,10 +1117,12 @@ async function renderCurrent() {
       }
     });
 
-    // Ненавязчивая просьба поддержать проект — каждую 10-ю пройденную историю, не чаще. Выключена
-    // флагом DONATE_BANNER_ENABLED, пока не готова сама кнопка доната (см. константу вверху файла).
+    // Ненавязчивая просьба поддержать проект — обычно каждую 10-ю пройденную историю, не чаще (см.
+    // константу DONATE_BANNER_ENABLED вверху файла). Временно показывается после КАЖДОЙ истории —
+    // чтобы можно было увидеть баннер, не проходя 10 историй подряд. Вернуть строгий показ — заменить
+    // "true" ниже обратно на "getCompleted().size % 10 === 0".
     let donateShown = false;
-    if (DONATE_BANNER_ENABLED && getCompleted().size % 10 === 0) {
+    if (DONATE_BANNER_ENABLED && true) {
       const banner = document.createElement('div');
       banner.className = 'donate-banner';
       banner.innerHTML = `<span>${t('donateText')}</span><a href="${DONATE_URL}" target="_blank" rel="noopener">${t('donateLink')}</a><button class="donate-close" aria-label="${t('exit')}">✕</button>`;
