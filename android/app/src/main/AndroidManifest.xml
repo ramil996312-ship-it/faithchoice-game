@@ -50,5 +50,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Capacitor's BridgeWebChromeClient.onPermissionRequest requests BOTH of these together for
+         audio-capture (see AUDIO_CAPTURE handling) — RECORD_AUDIO alone isn't enough even if the
+         user already granted mic access in Android Settings; the missing declaration below made the
+         combined permission check fail regardless. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>
