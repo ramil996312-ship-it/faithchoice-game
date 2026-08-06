@@ -961,9 +961,6 @@ function startStory(key) {
   basedOnEl.classList.add('hidden'); // на время чтения скрыта — освобождает строку под заголовком
   titleEl.textContent = character.name;
   themeEl.textContent = character.theme;
-  const photoThumbEl = document.getElementById('storyPhotoThumb');
-  photoThumbEl.style.display = '';
-  photoThumbEl.querySelector('img').src = `photos/${key}.jpg`;
   const startColor = colorForTheme(character.color);
   document.documentElement.style.setProperty('--accent', startColor);
   document.documentElement.style.setProperty('--btn-text', readableTextOn(startColor));
@@ -1051,6 +1048,17 @@ async function renderCurrent() {
     parts.push({ id: story.currentId, text: story.current().text });
   }
   const scene = story.current();
+
+  // Фото персонажа — один раз на всю историю (renderCurrent идёт по нескольку раз за прохождение,
+  // на каждый переход между сценами с выбором), иначе один и тот же снимок дублировался бы перед
+  // каждым новым отрезком текста. Пользователь явно предпочёл этот большой атмосферный блок
+  // компактной закреплённой миниатюре — уезжает из вида по мере роста текста, это осознанный выбор.
+  if (!feedEl.querySelector('.scene-photo')) {
+    const scenePhoto = document.createElement('div');
+    scenePhoto.className = 'scene-photo';
+    scenePhoto.innerHTML = `<img src="photos/${currentKey}.jpg" alt="" data-key="${currentKey}" loading="lazy" onerror="this.style.display='none'">`;
+    feedEl.appendChild(scenePhoto);
+  }
 
   const stepNum = document.createElement('div');
   stepNum.className = 'scene-step-num';
