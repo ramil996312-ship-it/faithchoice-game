@@ -23,10 +23,10 @@ const CATEGORY_I18N_KEY = {
 };
 const CATEGORY_BY_KEY = {
   sonya: 'prolife', nastya: 'abuse', liza: 'abuse', timur: 'crime', sergey: 'dependency',
-  maksim: 'crime', kristina: 'conversion', polina: 'prolife', marina: 'abuse', alina: 'dependency',
-  zara: 'conversion', viktor: 'conversion', ruslan: 'conversion', roman: 'crime', anton: 'dependency',
-  pavel: 'grief', yulia: 'conversion', oksana: 'dependency', vika: 'abuse', tanya: 'grief',
-  galya: 'fame', denis: 'abuse', ignat: 'persecution', artem: 'fame', grisha: 'crime',
+  maksim: 'missions', kristina: 'conversion', polina: 'prolife', marina: 'abuse', alina: 'dependency',
+  zara: 'conversion', viktor: 'conversion', ruslan: 'conversion', roman: 'missions', anton: 'dependency',
+  pavel: 'grief', yulia: 'conversion', oksana: 'missions', vika: 'abuse', tanya: 'grief',
+  galya: 'fame', denis: 'abuse', ignat: 'persecution', artem: 'fame', grisha: 'missions',
   stas: 'specialFamily', zhenya: 'grief', inna: 'specialFamily', karina: 'abuse', darya: 'fame',
   milana: 'grief', egor: 'fame', vadim: 'crime', kostya: 'disability', marat: 'crime',
   yuriy: 'abuse', olya: 'disability', natasha: 'grief', lena: 'prolife', vera: 'specialFamily',
