@@ -293,7 +293,11 @@
      переполнении узкого экрана переносилась на уровень "Меню", а не пряталась второй строкой
      под иконками паузы/звука вправо. */
   #gameTopLeft { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; row-gap: 0.15rem; min-width: 0; }
-  #topRight { display: flex; align-items: center; gap: 0.3rem; flex: none; flex-wrap: wrap; row-gap: 0.15rem; max-width: 100%; }
+  /* margin-left:auto здесь (а не только justify-content:space-between на #gameTopRow) — при переносе
+     на вторую строку #topRight остаётся там единственным элементом, а space-between в этом случае
+     прижимает одиночный элемент строки к ЛЕВОМУ краю, а не к правому. auto-margin работает верно
+     независимо от того, делит ли #topRight строку с #gameTopLeft или переносится на свою. */
+  #topRight { display: flex; align-items: center; gap: 0.3rem; flex: none; flex-wrap: wrap; row-gap: 0.15rem; max-width: 100%; margin-left: auto; }
   #btnPause, #btnMute {
     background: none; border: none; color: var(--accent);
     font-size: 2.2rem; cursor: pointer; opacity: 0.85; padding: 0.25rem;
