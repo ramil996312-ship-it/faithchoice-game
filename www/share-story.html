@@ -118,15 +118,32 @@
   const story = document.getElementById('fStory');
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognizing = false, recognition = null;
+  // baseText — то, что уже было в поле до текущего нажатия на микрофон (ручной ввод или предыдущая
+  // надиктовка); finalizedThisSession — куски текущей сессии, которые распознаватель уже считает
+  // окончательными. Оба нужны, чтобы на каждый onresult пересобирать значение поля с нуля, не теряя
+  // то, что было раньше, и не дублируя уже подтверждённые куски.
+  let baseText = '', finalizedThisSession = '';
   if (SR) {
     recognition = new SR();
     recognition.lang = 'ru-RU';
     recognition.continuous = true;
-    recognition.interimResults = false;
+    // interimResults:true — раньше текст появлялся только когда распознаватель считал фразу
+    // полностью законченной (после паузы), из-за чего казалось, что микрофон не работает. Теперь
+    // промежуточный (ещё не подтверждённый) вариант тоже показывается сразу и по ходу договаривания
+    // фразы заменяется на уточнённый — тот же эффект, что у голосового ввода в клавиатуре телефона.
+    recognition.interimResults = true;
     recognition.onresult = (e) => {
-      let chunk = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) chunk += e.results[i][0].transcript;
-      if (chunk) story.value = (story.value ? story.value.trim() + ' ' : '') + chunk.trim();
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) {
+          finalizedThisSession = (finalizedThisSession ? finalizedThisSession + ' ' : '') + res[0].transcript.trim();
+        } else {
+          interim += res[0].transcript;
+        }
+      }
+      const committed = [baseText, finalizedThisSession].filter(Boolean).join(' ');
+      story.value = interim ? (committed ? committed + ' ' : '') + interim.trim() : committed;
     };
     recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); };
     // Раньше ошибка гасилась молча — кнопка просто гасла без объяснений, выглядело как "ничего не
@@ -152,6 +169,8 @@
   micBtn.addEventListener('click', () => {
     if (!recognition) return;
     if (recognizing) { recognition.stop(); return; }
+    baseText = story.value.trim();
+    finalizedThisSession = '';
     recognizing = true; micBtn.classList.add('recording'); recognition.start();
   });
 
