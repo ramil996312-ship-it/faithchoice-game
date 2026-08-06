@@ -240,15 +240,18 @@
     padding: 0.3rem 0.9rem; min-height: 1em; transform: rotate(-1.4deg);
   }
   #basedOnBadge:empty { border-color: transparent; padding: 0.3rem 0; }
-  #storyEmblem { display: flex; justify-content: center; margin-bottom: 0.15rem; }
+  /* Раньше была отдельной строкой по центру под кнопками — съедала лишнюю высоту шапки. Теперь —
+     компактная иконка в одном ряду с паузой/звуком (см. #topRight ниже), той же высоты, что и они. */
+  #storyEmblem { display: flex; flex: none; }
   #storyEmblem .emblem-frame {
-    position: relative; width: 3.6rem; height: 3.6rem;
+    position: relative; width: 2.5rem; height: 2.5rem;
     display: flex; align-items: center; justify-content: center;
     background: var(--bg);
-    border: 3px solid var(--icon-gold);
+    border: 2px solid var(--icon-gold);
+    border-radius: 50%;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--icon-gold) 55%, black);
   }
-  #storyEmblem svg { width: 2.2rem; height: 2.2rem; }
+  #storyEmblem svg { width: 1.5rem; height: 1.5rem; }
   #storyTitle { font-size: 1.1rem; color: var(--accent); text-align: center; letter-spacing: 0.02em; }
   #storyTheme { font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-bottom: 0.2rem; }
 
@@ -269,19 +272,18 @@
   }
   #gameTopRow {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 0.5rem; row-gap: 0.4rem; margin-bottom: -2.6rem; flex-wrap: wrap; position: relative; z-index: 1;
+    gap: 0.5rem; row-gap: 0.4rem; margin-bottom: 0.3rem; flex-wrap: wrap; position: relative; z-index: 1;
     padding: 0 0.3rem;
   }
   /* flex-wrap выше — подстраховка на случай переполнения (узкий экран/крупный системный шрифт):
      ряд переносится на вторую строку целиком, а не обрезает кнопку звука за пределы экрана без
      возможности до неё дотянуться — это и произошло в Capacitor-приложении на реальном телефоне
-     (в браузере эффективная ширина чуть шире, там не проявлялось). Оказалось, что перенос —
-     совсем не редкий случай: "← Меню" + "Скачать офлайн" вдвоём уже занимают всю ширину на многих
-     реальных телефонах, так что #topRight (пауза/звук/тема) переносится на вторую строку почти
-     всегда, а не только при увеличенном системном шрифте. margin-bottom выше рассчитан на ОДНУ
-     строку — при переносе на две он утягивает эмблему книги (#storyEmblem) прямо в перенесённые
-     иконки. .wrapped ниже включается через JS (fixHeaderWrap в app.js), когда перенос обнаружен. */
-  #gameTopRow.wrapped { margin-bottom: 0.4rem; }
+     (в браузере эффективная ширина чуть шире, там не проявлялось). Раньше здесь стоял отрицательный
+     margin-bottom, подтягивавший отдельную строку с эмблемой книги (#storyEmblem) — из-за него при
+     переносе на две строки эмблема наезжала на перенесённые иконки. Эмблему перенесли внутрь
+     #topRight (тот же ряд, что пауза/звук/тема) — отдельной строки под неё больше нет, поэтому и
+     подтягивать через отрицательный отступ больше нечего; JS-определение переноса (fixHeaderWrap)
+     тоже убрано за ненадобностью. */
   #gameTopRow #langSwitch { margin-bottom: 0; }
   /* Кнопка офлайн-загрузки — прямой сосед "Меню" (не внутри #topRight с иконками), чтобы при
      переполнении узкого экрана переносилась на уровень "Меню", а не пряталась второй строкой
@@ -303,6 +305,7 @@
      а не как кнопка. */
   #topRight #btnTheme {
     position: static; width: auto; height: auto; font-size: 2.2rem;
+    margin-left: auto; /* пауза/звук/эмблема группируются слева, тема прижимается к правому краю ряда */
     background: none; border: 1.5px solid var(--accent); border-radius: 50%; box-shadow: none;
     color: var(--accent); opacity: 0.85; padding: 0.3rem;
     display: flex; align-items: center; justify-content: center;
@@ -722,9 +725,9 @@
         <div id="topRight">
           <button id="btnPause" title="Пауза"><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
           <button id="btnMute" title="Звук"></button>
+          <div id="storyEmblem" aria-hidden="true"><div class="emblem-frame"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div></div>
         </div>
       </div>
-      <div id="storyEmblem" aria-hidden="true"><div class="emblem-frame"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div></div>
       <div id="storyTitle"></div>
       <div id="storyTheme"></div>
       <div class="faith-track-wrap">

@@ -129,7 +129,22 @@
       if (chunk) story.value = (story.value ? story.value.trim() + ' ' : '') + chunk.trim();
     };
     recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); };
-    recognition.onerror = () => { recognizing = false; micBtn.classList.remove('recording'); };
+    // Раньше ошибка гасилась молча — кнопка просто гасла без объяснений, выглядело как "ничего не
+    // происходит". e.error — код причины: 'not-allowed' (нет разрешения на микрофон), 'network'
+    // (нужен интернет — распознавание речи в WebView идёт через облачный сервис Google, а не
+    // локально), 'no-speech' (не расслышал), 'audio-capture' (нет доступа к микрофону физически).
+    const ERROR_HINTS = {
+      'not-allowed': 'Нет доступа к микрофону — разрешите доступ в настройках приложения на телефоне.',
+      'service-not-allowed': 'Нет доступа к микрофону — разрешите доступ в настройках приложения на телефоне.',
+      'network': 'Нужен интернет — распознавание речи работает через сеть, не офлайн.',
+      'audio-capture': 'Микрофон недоступен на этом устройстве.',
+      'no-speech': 'Не расслышал — попробуйте ещё раз, говорите после нажатия на микрофон.',
+    };
+    recognition.onerror = (e) => {
+      recognizing = false; micBtn.classList.remove('recording');
+      document.getElementById('micHint').textContent =
+        ERROR_HINTS[e.error] || ('Голосовой ввод не сработал (' + e.error + ') — используйте клавиатуру.');
+    };
   } else {
     micBtn.disabled = true;
     document.getElementById('micHint').textContent = 'Голосовой ввод не поддерживается в этом браузере — используйте клавиатуру.';
