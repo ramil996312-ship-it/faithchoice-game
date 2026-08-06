@@ -118,10 +118,14 @@
   const story = document.getElementById('fStory');
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognizing = false, recognition = null;
+  // userWantsRecording (в отличие от recognizing) не гасится автоперезапуском ниже — только явным
+  // нажатием на микрофон или неустранимой ошибкой. recognizing отражает состояние текущей сессии
+  // движка, userWantsRecording — что хочет пользователь; onend их сверяет, чтобы решить,
+  // перезапускать сессию молча или действительно остановиться.
+  let userWantsRecording = false;
   // baseText — то, что уже было в поле до текущего нажатия на микрофон (ручной ввод или предыдущая
-  // надиктовка); finalizedThisSession — куски текущей сессии, которые распознаватель уже считает
-  // окончательными. Оба нужны, чтобы на каждый onresult пересобирать значение поля с нуля, не теряя
-  // то, что было раньше, и не дублируя уже подтверждённые куски.
+  // надиктовка); finalizedThisSession — куски ТЕКУЩЕЙ сессии движка, уже подтверждённые как
+  // окончательные. Сбрасываются заново при каждом (пере)старте recognition.start().
   let baseText = '', finalizedThisSession = '';
   if (SR) {
     recognition = new SR();
@@ -132,20 +136,47 @@
     // промежуточный (ещё не подтверждённый) вариант тоже показывается сразу и по ходу договаривания
     // фразы заменяется на уточнённый — тот же эффект, что у голосового ввода в клавиатуре телефона.
     recognition.interimResults = true;
+    // Раньше цикл шёл от e.resultIndex и складывал КАЖДЫЙ финальный результат в finalizedThisSession
+    // по мере появления. На этом устройстве resultIndex, судя по всему, не совпадает со спецификацией
+    // (движок присылает уже обработанные ранее финальные результаты повторно) — отсюда "Я Я Я хочу Я
+    // хочу рассказать...". Берём только САМЫЙ ПОСЛЕДНИЙ результат массива и коммитим его текст в
+    // finalizedThisSession ровно один раз (when isFinal становится true впервые для этого индекса) —
+    // не зависит от того, honour'ит ли устройство resultIndex.
+    let lastFinalIndex = -1;
     recognition.onresult = (e) => {
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) {
-          finalizedThisSession = (finalizedThisSession ? finalizedThisSession + ' ' : '') + res[0].transcript.trim();
-        } else {
-          interim += res[0].transcript;
+      const idx = e.results.length - 1;
+      const res = e.results[idx];
+      const transcript = res[0].transcript.trim();
+      if (res.isFinal) {
+        if (idx > lastFinalIndex) {
+          finalizedThisSession = (finalizedThisSession ? finalizedThisSession + ' ' : '') + transcript;
+          lastFinalIndex = idx;
         }
+        story.value = [baseText, finalizedThisSession].filter(Boolean).join(' ');
+      } else {
+        const committed = [baseText, finalizedThisSession].filter(Boolean).join(' ');
+        story.value = (committed ? committed + ' ' : '') + transcript;
       }
-      const committed = [baseText, finalizedThisSession].filter(Boolean).join(' ');
-      story.value = interim ? (committed ? committed + ' ' : '') + interim.trim() : committed;
+      story.scrollTop = story.scrollHeight; // текст уезжает за нижний край по мере надиктовки — держим свежую строку в кадре
     };
-    recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); };
+    recognition.onend = () => {
+      if (userWantsRecording) {
+        // Движок сам оборвал сессию (короткая пауза в речи — Android это делает даже при
+        // continuous:true, несмотря на название). Это не решение пользователя остановиться —
+        // тихо перезапускаем, перенося уже надиктованное в baseText новой сессии. Небольшая
+        // задержка нужна, иначе на некоторых устройствах recognition.start() падает с
+        // InvalidStateError, если вызвать его сразу же внутри onend.
+        baseText = story.value.trim();
+        finalizedThisSession = '';
+        lastFinalIndex = -1;
+        setTimeout(() => {
+          if (!userWantsRecording) return; // пользователь успел нажать "стоп" за время задержки
+          try { recognition.start(); } catch { recognizing = false; micBtn.classList.remove('recording'); }
+        }, 200);
+      } else {
+        recognizing = false; micBtn.classList.remove('recording');
+      }
+    };
     // Раньше ошибка гасилась молча — кнопка просто гасла без объяснений, выглядело как "ничего не
     // происходит". e.error — код причины: 'not-allowed' (нет разрешения на микрофон), 'network'
     // (нужен интернет — распознавание речи в WebView идёт через облачный сервис Google, а не
@@ -158,6 +189,11 @@
       'no-speech': 'Не расслышал — попробуйте ещё раз, говорите после нажатия на микрофон.',
     };
     recognition.onerror = (e) => {
+      // no-speech при ещё активном намерении пользователя — это та самая "короткая пауза", её
+      // молча доигрывает onend (см. выше), а не эта ошибка. Показываем подсказку только для
+      // остальных ошибок или если пользователь уже не диктует.
+      if (e.error === 'no-speech' && userWantsRecording) return;
+      userWantsRecording = false;
       recognizing = false; micBtn.classList.remove('recording');
       document.getElementById('micHint').textContent =
         ERROR_HINTS[e.error] || ('Голосовой ввод не сработал (' + e.error + ') — используйте клавиатуру.');
@@ -168,7 +204,8 @@
   }
   micBtn.addEventListener('click', () => {
     if (!recognition) return;
-    if (recognizing) { recognition.stop(); return; }
+    if (recognizing) { userWantsRecording = false; recognition.stop(); return; }
+    userWantsRecording = true;
     baseText = story.value.trim();
     finalizedThisSession = '';
     recognizing = true; micBtn.classList.add('recording'); recognition.start();
