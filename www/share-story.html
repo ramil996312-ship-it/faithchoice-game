@@ -136,26 +136,26 @@
     // промежуточный (ещё не подтверждённый) вариант тоже показывается сразу и по ходу договаривания
     // фразы заменяется на уточнённый — тот же эффект, что у голосового ввода в клавиатуре телефона.
     recognition.interimResults = true;
-    // Раньше цикл шёл от e.resultIndex и складывал КАЖДЫЙ финальный результат в finalizedThisSession
-    // по мере появления. На этом устройстве resultIndex, судя по всему, не совпадает со спецификацией
-    // (движок присылает уже обработанные ранее финальные результаты повторно) — отсюда "Я Я Я хочу Я
-    // хочу рассказать...". Берём только САМЫЙ ПОСЛЕДНИЙ результат массива и коммитим его текст в
-    // finalizedThisSession ровно один раз (when isFinal становится true впервые для этого индекса) —
-    // не зависит от того, honour'ит ли устройство resultIndex.
-    let lastFinalIndex = -1;
+    // На этом устройстве каждый новый результат (и финальный, и промежуточный) — это не отдельный
+    // новый кусок, а ВСЯ фраза заново, целиком, с добавленными словами в конце ("хотел" → "хотел
+    // узнать" → "хотел узнать какие" → ...). Прошлая версия считала каждый новый результат отдельным
+    // куском и приклеивала его к уже накопленному — отсюда "хотел хотел хотел узнать хотел узнать...".
+    // Проверяем: новый результат ПРОДОЛЖАЕТ уже подтверждённый текст (начинается с него) — тогда это
+    // именно расширение той же фразы, и его надо ЗАМЕНИТЬ, а не приклеить. Если не продолжает —
+    // это действительно отдельная новая фраза (на случай устройств, которые ведут себя иначе), и её
+    // приклеиваем через пробел. Сравнение регистронезависимое — первое слово фразы распознаватель
+    // иногда переприсылает с другой заглавной буквой.
     recognition.onresult = (e) => {
       const idx = e.results.length - 1;
       const res = e.results[idx];
       const transcript = res[0].transcript.trim();
+      const extendsPrev = finalizedThisSession && transcript.toLowerCase().startsWith(finalizedThisSession.toLowerCase());
+      const merged = (!finalizedThisSession || extendsPrev) ? transcript : finalizedThisSession + ' ' + transcript;
       if (res.isFinal) {
-        if (idx > lastFinalIndex) {
-          finalizedThisSession = (finalizedThisSession ? finalizedThisSession + ' ' : '') + transcript;
-          lastFinalIndex = idx;
-        }
+        finalizedThisSession = merged;
         story.value = [baseText, finalizedThisSession].filter(Boolean).join(' ');
       } else {
-        const committed = [baseText, finalizedThisSession].filter(Boolean).join(' ');
-        story.value = (committed ? committed + ' ' : '') + transcript;
+        story.value = [baseText, merged].filter(Boolean).join(' ');
       }
       story.scrollTop = story.scrollHeight; // текст уезжает за нижний край по мере надиктовки — держим свежую строку в кадре
     };
@@ -168,7 +168,6 @@
         // InvalidStateError, если вызвать его сразу же внутри onend.
         baseText = story.value.trim();
         finalizedThisSession = '';
-        lastFinalIndex = -1;
         setTimeout(() => {
           if (!userWantsRecording) return; // пользователь успел нажать "стоп" за время задержки
           try { recognition.start(); } catch { recognizing = false; micBtn.classList.remove('recording'); }
