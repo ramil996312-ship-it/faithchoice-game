@@ -621,26 +621,35 @@
     color: var(--text); font-family: inherit; padding: 0.15rem 0.3rem;
   }
   body { padding-bottom: 4.6rem; } /* место под фикс. таб-бар, чтобы контент не залезал под него */
+  /* Таб-бар: лёгкий градиент + золотая линия-волосок сверху вместо плоской заливки — та же идея
+     "глубже, не ярче", что и у остального интерфейса (мягкие тени/градиенты у кнопок и карточек),
+     просто раньше не была применена именно здесь. */
   #tabBar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    display: flex; justify-content: center; gap: 0; background: var(--surface);
-    border-top: 1px solid var(--border); box-shadow: 0 -2px 10px rgba(0,0,0,0.25);
-    padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom));
+    display: flex; justify-content: center; gap: 0;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 85%, black 15%), var(--surface));
+    border-top: 1px solid color-mix(in srgb, var(--icon-gold) 40%, transparent);
+    box-shadow: 0 -4px 14px rgba(0,0,0,0.3);
+    padding: 0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom));
   }
   .tab-btn {
     position: relative; flex: 1; max-width: 160px; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
     background: none; border: none; color: var(--text-soft); font-family: inherit; font-size: 0.7rem;
-    cursor: pointer; padding: 0.3rem 0.5rem; transition: color 0.15s;
+    cursor: pointer; padding: 0.4rem 0.5rem; border-radius: 12px; transition: color 0.15s, background 0.15s;
   }
+  .tab-btn:active { background: color-mix(in srgb, var(--icon-gold) 8%, transparent); }
   .tab-btn svg { width: 22px; height: 22px; transition: transform 0.15s; }
-  /* Активная вкладка: золотой цвет + подчёркивающая полоска снизу + жирный текст — иначе разница
-     между активной и неактивной вкладкой была только в оттенке текста, почти незаметно. */
+  /* Активная вкладка: не просто цвет текста (было почти незаметно) — золотая "таблетка"-подложка за
+     иконкой, подписи чуть крупнее и жирнее, лёгкое свечение вокруг иконки. */
   .tab-btn.active { color: var(--icon-gold); font-weight: bold; }
-  .tab-btn.active svg { transform: scale(1.08); }
-  .tab-btn.active::after {
-    content: ''; position: absolute; bottom: -0.1rem; left: 50%; transform: translateX(-50%);
-    width: 1.6rem; height: 3px; border-radius: 2px; background: var(--icon-gold);
+  .tab-btn.active .tab-icon-bg {
+    position: absolute; top: 0.05rem; left: 50%; transform: translateX(-50%);
+    width: 2.6rem; height: 1.6rem; border-radius: 999px;
+    background: color-mix(in srgb, var(--icon-gold) 16%, transparent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--icon-gold) 35%, transparent);
   }
+  .tab-btn.active svg { position: relative; transform: scale(1.08); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--icon-gold) 55%, transparent)); }
+  .tab-btn.active span { position: relative; }
   #profileScreen { display: flex; flex-direction: column; gap: 1rem; }
   .profile-head {
     display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border);
@@ -756,10 +765,12 @@
 
 <nav id="tabBar" class="hidden">
   <button type="button" class="tab-btn" data-tab="stories">
+    <span class="tab-icon-bg" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5c-.8 0-1.5-.7-1.5-1.5v-13z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5v-13z"/></svg>
     <span id="tabStoriesLabel"></span>
   </button>
   <button type="button" class="tab-btn" data-tab="profile">
+    <span class="tab-icon-bg" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1-3.8 4.2-6 7.5-6s6.5 2.2 7.5 6"/></svg>
     <span id="tabProfileLabel"></span>
   </button>
