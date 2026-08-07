@@ -692,11 +692,16 @@ function initDonate() {
   cta.textContent = t('donateLink');
 }
 function closeDonateModal() { donateModalEl.classList.add('hidden'); }
-donateBtnEl.addEventListener('click', () => donateModalEl.classList.remove('hidden'));
-document.getElementById('donateModalClose').addEventListener('click', closeDonateModal);
-document.getElementById('donateModalBackdrop').addEventListener('click', closeDonateModal);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDonateModal(); });
-initDonate();
+// reserve-preview.html переиспользует этот же app.js, но не содержит разметку доната (она есть только
+// в index.html) — без этой проверки addEventListener на null валил весь скрипт ещё до отрисовки меню,
+// то есть черновик резервных историй вообще не открывался (ни текст, ни озвучка).
+if (donateBtnEl) {
+  donateBtnEl.addEventListener('click', () => donateModalEl.classList.remove('hidden'));
+  document.getElementById('donateModalClose').addEventListener('click', closeDonateModal);
+  document.getElementById('donateModalBackdrop').addEventListener('click', closeDonateModal);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDonateModal(); });
+  initDonate();
+}
 
 // Стрелка на полоске веры в момент выбора — стартует из центра и "летит" к тому сердцу, в чью
 // сторону сдвинулся выбор: красная к тьме, зелёная к свету (см. .faith-arrow в index.html).
@@ -720,13 +725,15 @@ function applyStaticText() {
   if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
   muteBtn.title = t('soundLabel');
   document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
-  document.getElementById('tabStoriesLabel').textContent = t('tabStories');
-  document.getElementById('tabProfileLabel').textContent = t('tabProfile');
-  if (DONATE_BANNER_ENABLED) {
+  if (tabBarEl) {
+    document.getElementById('tabStoriesLabel').textContent = t('tabStories');
+    document.getElementById('tabProfileLabel').textContent = t('tabProfile');
+  }
+  if (DONATE_BANNER_ENABLED && donateBtnEl) {
     document.getElementById('donateModalText').textContent = t('donateText');
     document.getElementById('donateModalCta').textContent = t('donateLink');
   }
-  if (!profileScreenEl.classList.contains('hidden')) renderProfile();
+  if (profileScreenEl && !profileScreenEl.classList.contains('hidden')) renderProfile();
 }
 
 // Ссылка на конкретную историю (?story=marat из кнопки "Поделиться") — чтобы можно было отправить
@@ -737,7 +744,7 @@ function getSharedStoryKey() {
 }
 function enterApp() {
   scheduleDailyReminder();
-  tabBarEl.classList.remove('hidden');
+  if (tabBarEl) tabBarEl.classList.remove('hidden');
   showScreen('stories');
   const sharedKey = getSharedStoryKey();
   if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
@@ -1198,12 +1205,14 @@ document.documentElement.lang = lang; // язык мог быть взят из 
 let activeTab = 'stories';
 function showScreen(tab) {
   activeTab = tab;
-  storiesScreenEl.classList.toggle('hidden', tab !== 'stories');
-  profileScreenEl.classList.toggle('hidden', tab !== 'profile');
-  tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  // reserve-preview.html переиспользует app.js без разметки таб-бара/профиля (см. donate-блок выше
+  // для того же паттерна) — проверки нужны, чтобы черновик резервных историй не падал целиком.
+  if (storiesScreenEl) storiesScreenEl.classList.toggle('hidden', tab !== 'stories');
+  if (profileScreenEl) profileScreenEl.classList.toggle('hidden', tab !== 'profile');
+  if (tabBarEl) tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (tab === 'profile') renderProfile();
 }
-tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.tab)));
+if (tabBarEl) tabBarEl.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.tab)));
 
 function formatDate(ts) {
   try { return new Date(ts).toLocaleDateString(lang); } catch { return ''; }
