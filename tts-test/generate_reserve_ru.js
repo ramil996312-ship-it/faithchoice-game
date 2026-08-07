@@ -45,7 +45,10 @@ async function synthesize(text, voiceName, attempt = 1) {
 
 async function main() {
   const { STORIES, CHARACTERS } = require('../content-reserve-ru.js');
-  const storyKeys = Object.keys(STORIES);
+  // Необязательные аргументы командной строки — конкретные ключи персонажей, чтобы озвучить только их
+  // (например, после точечной правки текста), а не платить за все 50 историй заново каждый раз.
+  const onlyKeys = process.argv.slice(2);
+  const storyKeys = onlyKeys.length ? onlyKeys.filter(k => STORIES[k]) : Object.keys(STORIES);
   const outRoot = path.join(__dirname, '..', 'audio', 'ru');
   let done = 0, chars = 0, failed = [];
   const total = storyKeys.reduce((sum, k) => sum + Object.keys(STORIES[k].scenes).length, 0);
