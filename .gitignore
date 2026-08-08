@@ -1,5 +1,6 @@
 # Секреты — никогда не коммитить
 .tts-key.txt
+.cloudflare-token.txt
 
 # Зависимости — переустанавливаются по package.json
 node_modules/
