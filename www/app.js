@@ -4,10 +4,10 @@ const FAITH_RANGE = 30; // ponytail: под текущий разброс effect
 // Баннер с просьбой поддержать проект (после каждой 10-й пройденной истории) — текст/логика готовы,
 // но по-настоящему рабочей ссылки ещё нет (ждёт открытия ИП, см. память проекта). Включено сейчас
 // только чтобы визуально посмотреть баннер — DONATE_URL всё ещё заглушка "#", никуда реально не ведёт.
-// Выключено перед публикацией в сторы (2026-08-06) — рабочей ссылки на приём пожертвований ещё нет
-// (ждёт открытия ИП), а нерабочая кнопка на кону у реальных пользователей выглядит как баг.
-// Включить обратно и вписать реальный DONATE_URL, когда появится способ принимать пожертвования.
-const DONATE_BANNER_ENABLED = false;
+// Включено обратно (2026-08-12) — вместо рабочей ссылки модалка показывает банковские реквизиты
+// для ручного перевода (см. donateBankDetails в i18n.js), DONATE_URL остаётся заглушкой и просто не
+// рендерится (см. initDonate()).
+const DONATE_BANNER_ENABLED = true;
 const DONATE_URL = '#';
 const LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
 const LANG_LABEL = { ru: 'RU', en: 'EN', es: 'ES', zh: '中', hi: 'हि' };
@@ -339,9 +339,20 @@ const MIN_AUDIO_BYTES = 10000;
 // Путь к mp3 конкретной сцены для проигрывания прямо сейчас: если уже скачан локально — с диска
 // (работает без сети), иначе — качаем один раз из сети и одновременно проигрываем и кешируем на
 // будущее (а не два отдельных сетевых запроса на один и тот же файл).
+// Резервные истории (черновики) правятся и переозвучиваются заново много раз, но mp3 отдаются с сервера
+// с Cache-Control: immutable на год — если браузер телефона уже когда-то закэшировал файл под этим же
+// путём, он не переспросит сервер даже после новой генерации и Cloudflare purge (тот чистит только CDN,
+// не браузер пользователя). Каждая свежая reserve-N.html ссылка от fresh_reserve_link.sh уже содержит
+// в имени файла уникальную метку времени — переиспользуем её как cache-buster для звука тоже, без
+// отдельного счётчика версий. На живой игре (index.html, финальный контент) поведение не трогаем.
+const RESERVE_CACHE_BUST = (() => {
+  const m = location.pathname.match(/reserve[^/]*-(\d+)\.html$/);
+  return m ? m[1] : null;
+})();
+
 async function resolveAudioSrc(lang, storyKey, sceneId) {
   const relPath = `${lang}/${storyKey}/${sceneId}.mp3`;
-  if (!isNative) return `${AUDIO_BASE}/${relPath}`;
+  if (!isNative) return RESERVE_CACHE_BUST ? `${AUDIO_BASE}/${relPath}?v=${RESERVE_CACHE_BUST}` : `${AUDIO_BASE}/${relPath}`;
 
   const cached = await getCachedAudioUri(relPath);
   if (cached) return cached;
@@ -687,9 +698,15 @@ function initDonate() {
   if (!DONATE_BANNER_ENABLED) return;
   donateBtnEl.classList.remove('hidden');
   document.getElementById('donateModalText').textContent = t('donateText');
+  // Реквизиты для ручного банковского перевода — донат пока принимается только так, отдельного
+  // платёжного сервиса нет, поэтому CTA-ссылка на DONATE_URL ('#') скрыта как нерабочая.
+  document.getElementById('donateModalBankDetails').textContent = t('donateBankDetails') || '';
   const cta = document.getElementById('donateModalCta');
-  cta.href = DONATE_URL;
-  cta.textContent = t('donateLink');
+  if (DONATE_URL && DONATE_URL !== '#') {
+    cta.href = DONATE_URL;
+    cta.textContent = t('donateLink');
+    cta.classList.remove('hidden');
+  }
 }
 function closeDonateModal() { donateModalEl.classList.add('hidden'); }
 // reserve-preview.html переиспользует этот же app.js, но не содержит разметку доната (она есть только

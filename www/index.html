@@ -568,6 +568,13 @@
     margin: 0 0 1.1rem; color: #4a3a1a; font-family: Georgia, 'Times New Roman', serif;
     font-style: italic; font-size: 1.1rem; line-height: 1.55;
   }
+  .donate-bank-details {
+    display: none; text-align: left; white-space: pre-wrap; word-break: break-word;
+    background: rgba(255,255,255,0.5); border: 1px solid #d8b568; border-radius: 10px;
+    padding: 0.8rem 1rem; margin: 0 0 1.1rem; color: #4a3a1a; font-family: monospace;
+    font-size: 0.85rem; line-height: 1.5; max-height: 45vh; overflow-y: auto; user-select: text;
+  }
+  .donate-bank-details:not(:empty) { display: block; }
   .donate-modal-box .donate-cta {
     display: inline-block; background: linear-gradient(180deg, #d8a83a, #b8860b);
     color: #fffbf0; font-weight: bold; text-decoration: none; border-radius: 999px;
@@ -812,7 +819,8 @@
     <div class="verse-modal-box donate-modal-box">
       <div class="donate-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8.5 2.5 5 6 5c2 0 3.5 1.2 4.2 2.6.4.8 1.2.8 1.6 0C12.5 6.2 14 5 16 5c3.5 0 5 3.5 3.5 7-2.5 4.65-7.5 9-7.5 9z"/></svg></div>
       <p id="donateModalText"></p>
-      <a id="donateModalCta" href="#" target="_blank" rel="noopener" class="donate-cta"></a>
+      <pre id="donateModalBankDetails" class="donate-bank-details"></pre>
+      <a id="donateModalCta" href="#" target="_blank" rel="noopener" class="donate-cta hidden"></a>
       <button type="button" id="donateModalClose">✕</button>
     </div>
   </div>
