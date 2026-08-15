@@ -300,14 +300,21 @@
 <script src="engine.js"></script>
 <script src="i18n.js"></script>
 <script src="content-reserve-ru.js"></script>
+<script src="content-reserve-en.js"></script>
+<script src="content-reserve-es.js"></script>
+<script src="content-reserve-zh.js"></script>
+<script src="content-reserve-hi.js"></script>
 <script>
-  // Превью показывает только русский черновик. Переключатель языков (RU/EN/ES/中/हि) из app.js
-  // не трогаем и не выключаем — вместо этого подставляем один и тот же резервный набор
-  // под все 5 ключей, которые app.js ожидает найти в window.Content.
+  // Русский черновик — полный (все 50). Переводы появляются постепенно, историю за историей, по мере
+  // подтверждения после прослушивания — content-reserve-<lang>.js содержит только уже переведённые.
+  // Для языка без перевода конкретной истории подставляем русский набор целиком (как раньше), чтобы
+  // не показывать пустое меню, пока хотя бы одна история этого языка не готова.
   (function () {
-    var reserve = window.Content && window.Content.reserve;
     window.Content = window.Content || {};
-    ['ru', 'en', 'es', 'zh', 'hi'].forEach(function (l) { window.Content[l] = reserve; });
+    var ru = window.Content.reserve;
+    var overrides = { en: window.Content.reserveEn, es: window.Content.reserveEs, zh: window.Content.reserveZh, hi: window.Content.reserveHi };
+    window.Content.ru = ru;
+    ['en', 'es', 'zh', 'hi'].forEach(function (l) { window.Content[l] = overrides[l] || ru; });
   })();
 </script>
 <script src="app.js"></script>
