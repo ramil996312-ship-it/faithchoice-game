@@ -1287,7 +1287,7 @@ function renderProfile() {
         ${myPhoto ? `<img src="${myPhoto}" alt="">` : PHOTO_PLACEHOLDER_ICON}
         <input type="file" accept="image/*" style="display:none" onchange="onProfilePhotoPicked(this)">
       </label>
-      <div><h2 onclick="editProfileName()" style="cursor:pointer">${getProfileName() ? t('profileGreeting').replace('{name}', getProfileName()) : t('profileTitle')}</h2></div>
+      <div><h2 id="profileGreetingText" onclick="editProfileName()" style="cursor:pointer"></h2></div>
     </div>
     <div class="profile-stats">
       <div class="profile-stat"><div class="num">${completed.size}</div><div class="label">${t('profileStoriesLabel').replace('{total}', totalStories)}</div></div>
@@ -1311,6 +1311,7 @@ function renderProfile() {
     </div>
     <button type="button" class="profile-cta" id="profileShareBtn">${t('profileShare')}</button>
   `;
+  document.getElementById('profileGreetingText').textContent = getProfileName() ? t('profileGreeting').replace('{name}', getProfileName()) : t('profileTitle');
   const shareBtn = document.getElementById('profileShareBtn');
   if (shareBtn) shareBtn.addEventListener('click', () => { window.location.href = 'share-story.html'; });
 }
