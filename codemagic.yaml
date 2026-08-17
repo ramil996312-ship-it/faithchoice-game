@@ -12,6 +12,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
+        BUNDLE_ID: "net.faithchoice.app"
       node: latest
       xcode: latest
       cocoapods: default
@@ -29,8 +30,6 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
-        env:
-          BUNDLE_ID: net.faithchoice.app
       - name: Add certificates to keychain
         script: keychain add-certificates
       - name: Set up code signing settings on Xcode project
