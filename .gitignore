@@ -1,6 +1,8 @@
 # Секреты — никогда не коммитить
 .tts-key.txt
 .cloudflare-token.txt
+.codemagic-token
+AuthKey_*.p8
 
 # Зависимости — переустанавливаются по package.json
 node_modules/
