@@ -695,14 +695,22 @@
   /* Таб-бар по макету пользователя (Claude Design): две вкладки на всю ширину 50/50, активная —
      сплошная золотая заливка (тот же приём var(--btn-text) для контрастного текста на золоте, что
      и у остальных акцентных кнопок), а не просто подсветка значка, как было раньше. */
+  /* max-width + margin:auto здесь работают и с position:fixed (left/right:0 задают только область
+     центровки, ширина ограничена max-width) — панель следует той же колонке 640/760px, что и main,
+     а не растягивается на весь экран на широком мониторе, пока контент над ней остаётся узкой
+     центрированной колонкой. */
   #tabBar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    max-width: 640px; margin: 0 auto;
     display: flex; gap: 0.5rem;
     background: var(--surface);
     border-top: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 14px rgba(0,0,0,0.3);
     padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 820px) {
+    #tabBar { max-width: 760px; }
   }
   .tab-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
