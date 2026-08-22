@@ -302,11 +302,13 @@
   #topRight { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.3rem; flex: 1 1 100%; }
   #topRightLeft { display: flex; align-items: center; gap: 0.3rem; justify-self: start; }
   #topRight #storyEmblem { justify-self: center; }
-  #btnPause, #btnMute {
+  #btnPause, #btnMute, #btnAutoListen {
     background: none; border: none; color: var(--accent);
     font-size: 2.2rem; cursor: pointer; opacity: 0.85; padding: 0.25rem;
   }
-  #btnPause:hover, #btnMute:hover { opacity: 1; }
+  #btnPause:hover, #btnMute:hover, #btnAutoListen:hover { opacity: 1; }
+  #btnAutoListen[aria-pressed="true"] { opacity: 1; color: var(--icon-gold); }
+  #btnAutoListen[aria-pressed="true"] svg { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--icon-gold) 60%, transparent)); }
   /* Кнопка паузы шире на ~3мм (доп. горизонтальный паддинг, высота не меняется) — по просьбе
      пользователя, тап на реальном телефоне ощущался слишком узким. */
   #btnPause { padding-left: 0.6rem; padding-right: 0.6rem; }
@@ -799,6 +801,7 @@
           <div id="topRightLeft">
             <button id="btnPause" title="Пауза"><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
             <button id="btnMute" title="Звук"></button>
+            <button id="btnAutoListen" title="Слушать" aria-pressed="false"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 14v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2Z"/><path d="M3 14v3a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2Z"/></svg></button>
           </div>
           <div id="storyEmblem" aria-hidden="true"><div class="emblem-frame"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div></div>
         </div>

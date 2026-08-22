@@ -89,6 +89,7 @@ const faithLabelsEl = document.getElementById('faithLabels');
 const progressEl = document.getElementById('progress');
 const muteBtn = document.getElementById('btnMute');
 const pauseBtn = document.getElementById('btnPause');
+const autoListenBtn = document.getElementById('btnAutoListen');
 const pauseHintEl = document.getElementById('pauseHint');
 const exitBtn = document.getElementById('btnExit');
 const h1El = document.getElementById('pageTitle');
@@ -608,6 +609,29 @@ function updatePauseBtn() {
   pauseHintEl.classList.toggle('pause-visible', isPaused);
 }
 pauseHintEl.addEventListener('click', () => { if (isPaused) togglePause(); });
+
+// Режим "просто слушать" — на развилках сама история выбирает светлый путь вместо ожидания тапа,
+// чтобы историю можно было дослушать целиком, не читая и не выбирая руками (см. renderCurrent(),
+// блок рендера choices). Сбрасывается при каждом новом открытии истории — активное решение, не
+// залипает молча между историями.
+let autoListen = false;
+function setAutoListen(on) {
+  autoListen = on;
+  autoListenBtn.setAttribute('aria-pressed', String(on));
+  if (on) scheduleAutoListenClick(); // включили прямо стоя на развилке — не заставлять тапать вручную
+}
+// Если сейчас показана развилка (controlsEl содержит помеченную кнопку) — тапнуть по ней с
+// небольшой задержкой, чтобы выбор не выглядел мгновенным/незаметным. Без развилки — no-op,
+// подхватится на следующей естественно.
+function scheduleAutoListenClick() {
+  if (!autoListen) return;
+  const target = controlsEl.querySelector('[data-auto-listen-target]');
+  if (!target) return;
+  setTimeout(() => {
+    if (autoListen && target.isConnected) target.click();
+  }, 1400);
+}
+autoListenBtn.addEventListener('click', () => setAutoListen(!autoListen));
 // Хук паузы для активно звучащей озвучки. speakAndReveal подставляет сюда pause/resume/abandon,
 // пока управляет конкретным <audio> текущей сцены.
 let activeVoicePause = null;
@@ -991,6 +1015,7 @@ function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
   ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
   markStarted(key);
+  setAutoListen(false);
   currentKey = key;
   const character = content().CHARACTERS.find(c => c.key === key);
   story = new Engine.Story(content().STORIES[key]);
@@ -1115,6 +1140,7 @@ async function renderCurrent() {
   renderProgress();
 
   if (scene.choices && scene.choices.length) {
+    let autoListenBtnTarget = null; // для режима "слушать" — куда автотапнуть на этой развилке
     scene.choices.forEach((choice, i) => {
       const btn = document.createElement('button');
       btn.textContent = choice.label;
@@ -1143,7 +1169,12 @@ async function renderCurrent() {
       });
       controlsEl.appendChild(btn);
       requestAnimationFrame(() => btn.classList.add('btn-visible'));
+      // Светлый путь — приоритет для автовыбора; если у развилки нет явного светлого варианта
+      // (dir==null у обоих), берём первый попавшийся, лишь бы история не встала намертво.
+      if (dir === 'light' || (!autoListenBtnTarget && i === 0)) autoListenBtnTarget = btn;
     });
+    if (autoListenBtnTarget) autoListenBtnTarget.dataset.autoListenTarget = '1';
+    scheduleAutoListenClick();
   } else {
     // scene.next == null — конец истории (промежуточные линейные сцены уже поглощены циклом выше,
     // сюда мы попадаем только на настоящем финале, а не на каждой сцене-мостике).
