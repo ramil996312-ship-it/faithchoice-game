@@ -102,6 +102,10 @@
   .ageGateEmblem svg { width: 2.6rem; height: 2.6rem; }
   #ageGate h2 { margin: 0 0 0.6rem; font-size: 1.1rem; color: var(--accent); font-weight: normal; }
   #ageGate p { margin: 0 0 1rem; font-size: 0.9rem; color: var(--text-soft); }
+  /* Приветствие — крупнее и заметнее заголовка предупреждения ниже (h2 просто без переопределения
+     размера отличался бы только цветом), это первое, что видит новый человек на сайте. */
+  #welcomeGreetingText { font-size: 1.3rem; }
+  #ageGateActions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.2rem; }
   #ageGate button {
     background: linear-gradient(180deg,
       color-mix(in srgb, var(--accent) 80%, white 20%) 0%,
@@ -121,6 +125,15 @@
     transform: translateY(3px);
     box-shadow: 0 0 0 transparent, inset 0 2px 5px rgba(0,0,0,0.3);
   }
+  /* Третья кнопка ("Рассказать свою историю") — визуально второстепенная (ghost-стиль, как
+     .profile-cta), не конкурирует с двумя основными входами. Специфичность "#ageGate button.X"
+     (1,1,1) нарочно выше, чем у "#ageGate button" (1,0,1) — иначе общий градиентный фон победил бы. */
+  #ageGate button.ageGate-secondary {
+    background: var(--surface); color: var(--icon-gold); border: 1px solid var(--icon-gold);
+    box-shadow: none; font-weight: bold;
+  }
+  #ageGate button.ageGate-secondary:hover { background: var(--icon-gold); color: var(--btn-text); filter: none; }
+  #ageGate button.ageGate-secondary:active { transform: translateY(1px); box-shadow: none; }
 
   #langSwitch { display: flex; justify-content: center; gap: 0.4rem; margin-bottom: 1.5rem; }
   .lang-btn {
@@ -781,9 +794,15 @@
 
   <div id="ageGate">
     <div class="ageGateEmblem" aria-hidden="true"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div>
+    <h2 id="welcomeGreetingText"></h2>
+    <p id="welcomeIntroText"></p>
     <h2 id="ageGateTitle"></h2>
     <p id="ageGateBody"></p>
-    <button id="btnAgeGateContinue"></button>
+    <div id="ageGateActions">
+      <button id="btnEnterRead"></button>
+      <button id="btnEnterListen"></button>
+      <button id="btnEnterShare" class="ageGate-secondary"></button>
+    </div>
   </div>
 
   <div id="storiesScreen">

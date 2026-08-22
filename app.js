@@ -617,7 +617,7 @@ pauseHintEl.addEventListener('click', () => { if (isPaused) togglePause(); });
 let autoListen = false;
 function setAutoListen(on) {
   autoListen = on;
-  autoListenBtn.setAttribute('aria-pressed', String(on));
+  if (autoListenBtn) autoListenBtn.setAttribute('aria-pressed', String(on)); // кнопки нет на reserve-preview.html
   if (on) scheduleAutoListenClick(); // включили прямо стоя на развилке — не заставлять тапать вручную
 }
 // Если сейчас показана развилка (controlsEl содержит помеченную кнопку) — тапнуть по ней с
@@ -631,7 +631,7 @@ function scheduleAutoListenClick() {
     if (autoListen && target.isConnected) target.click();
   }, 1400);
 }
-autoListenBtn.addEventListener('click', () => setAutoListen(!autoListen));
+if (autoListenBtn) autoListenBtn.addEventListener('click', () => setAutoListen(!autoListen));
 // Хук паузы для активно звучащей озвучки. speakAndReveal подставляет сюда pause/resume/abandon,
 // пока управляет конкретным <audio> текущей сцены.
 let activeVoicePause = null;
@@ -772,9 +772,23 @@ function applyStaticText() {
   faithLabelsEl.querySelector('.heart-light .heart-text').textContent = t('light');
   fitHeartLabels();
   exitBtn.textContent = t('exit');
+  // Экран приветствия/входа (welcomeGreetingText и три кнопки) есть только в index.html — на
+  // reserve-preview.html (нет профиля/вкладок) остался старый одиночный btnAgeGateContinue, поэтому
+  // всё ниже, кроме ageGateTitle/Body, защищено проверкой на существование элемента.
+  const welcomeGreetingEl = document.getElementById('welcomeGreetingText');
+  if (welcomeGreetingEl) welcomeGreetingEl.textContent = t('welcomeGreeting');
+  const welcomeIntroEl = document.getElementById('welcomeIntroText');
+  if (welcomeIntroEl) welcomeIntroEl.textContent = t('welcomeIntro');
   document.getElementById('ageGateTitle').textContent = t('ageGateTitle');
   document.getElementById('ageGateBody').textContent = t('ageGateBody');
-  document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
+  const enterReadBtn = document.getElementById('btnEnterRead');
+  if (enterReadBtn) {
+    enterReadBtn.textContent = t('btnEnterRead');
+    document.getElementById('btnEnterListen').textContent = t('btnEnterListen');
+    document.getElementById('btnEnterShare').textContent = t('profileShare');
+  } else {
+    document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
+  }
   if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
   muteBtn.title = t('soundLabel');
   document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
@@ -799,6 +813,18 @@ function enterApp() {
   scheduleDailyReminder();
   if (tabBarEl) tabBarEl.classList.remove('hidden');
   showScreen('stories');
+  // Переключатель языка больше не висит постоянно над списком историй (по просьбе пользователя —
+  // выбор языка нужен один раз на входе, а не на каждом экране) — переезжает жить в профиль
+  // (появляется там же, где по совету дизайнера и должны быть настройки языка/темы, см. renderProfile).
+  // profileScreenEl ещё пуст на первом входе (renderProfile() перезапишет innerHTML и переприкрепит
+  // элемент заново при первом открытии вкладки "Профиль") — appendChild сюда просто заранее паркует
+  // узел в правильном родителе, никакого визуального мигания нет, т.к. сам profileScreenEl скрыт.
+  // profileScreenEl === null на reserve-preview.html (нет вкладок/профиля вообще) — там переключатель
+  // просто остаётся в исходном месте наверху страницы, как было всегда.
+  if (profileScreenEl) {
+    profileScreenEl.appendChild(langSwitchEl);
+    langSwitchEl.classList.remove('hidden');
+  }
   const sharedKey = getSharedStoryKey();
   if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
 }
@@ -810,17 +836,43 @@ function enterApp() {
 // это единственный клик пользователя перед стартом истории. Без него enterApp()/startStory() запускал
 // бы озвучку прямо при загрузке страницы без единого жеста пользователя, а браузеры блокируют
 // автозапуск звука без клика — audio.play() тихо падал в фолбэк на печать с кликами клавиатуры.
+//
+// Экран объединяет приветствие/направление (по совету дизайнера — "одним предложением, что это
+// такое") с самим предупреждением, и предлагает сразу три входа: "Читать" (обычный интерактивный
+// режим), "Слушать" (режим сплошного прослушивания подряд — см. startContinuousListen), "Рассказать
+// свою историю" (сразу на share-story.html, минуя список историй).
 function initAgeGate() {
   if (localStorage.getItem('ageGateAccepted') === '1' && !getSharedStoryKey()) {
     ageGateEl.classList.add('hidden');
     enterApp();
     return;
   }
-  document.getElementById('btnAgeGateContinue').addEventListener('click', () => {
-    localStorage.setItem('ageGateAccepted', '1');
-    ageGateEl.classList.add('hidden');
-    enterApp();
-  });
+  const accept = () => { localStorage.setItem('ageGateAccepted', '1'); ageGateEl.classList.add('hidden'); };
+  // reserve-preview.html не получил экран приветствия с тремя входами (нет профиля/вкладок, куда вело
+  // бы "Слушать" или "Рассказать свою историю") — там как был, так и остался единственный btnAgeGateContinue.
+  const enterReadBtn = document.getElementById('btnEnterRead');
+  if (!enterReadBtn) {
+    document.getElementById('btnAgeGateContinue').addEventListener('click', () => { accept(); enterApp(); });
+    return;
+  }
+  enterReadBtn.addEventListener('click', () => { accept(); enterApp(); });
+  document.getElementById('btnEnterListen').addEventListener('click', () => { accept(); enterApp(); startContinuousListen(); });
+  document.getElementById('btnEnterShare').addEventListener('click', () => { accept(); window.location.href = 'share-story.html'; });
+}
+
+// Режим "слушать все истории подряд" — не тот же "просто слушать" внутри одной уже открытой истории
+// (autoListen выше, тапает по светлому пути на развилках), а следующий уровень: сама смена историй
+// тоже автоматическая. Переиспользует pickReminderStory() (первая непройденная по порядку) и тот же
+// autoListen — единственное отличие в том, что при завершении истории (см. блок scene.next==null в
+// renderCurrent) вместо возврата в меню запускается следующая непройденная.
+let continuousListenMode = false;
+function startContinuousListen() {
+  const data = content();
+  const key = pickReminderStory() || (data.CHARACTERS.find(c => data.STORIES[c.key]) || {}).key;
+  if (!key) return;
+  continuousListenMode = true;
+  if (activeTab !== 'stories') showScreen('stories');
+  startStory(key);
 }
 
 // Растёт при каждом выходе в меню — активные печать/озвучка сверяются с ним и не трогают
@@ -1019,7 +1071,10 @@ function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
   ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
   markStarted(key);
-  setAutoListen(false);
+  // В обычном режиме сбрасывается на каждую новую историю (активное решение читателя). В режиме
+  // "слушать все подряд" (continuousListenMode) должен, наоборот, оставаться включённым и на
+  // следующей истории тоже — иначе марафон прервался бы на первой же развилке второй истории.
+  setAutoListen(continuousListenMode);
   currentKey = key;
   const character = content().CHARACTERS.find(c => c.key === key);
   story = new Engine.Story(content().STORIES[key]);
@@ -1047,7 +1102,6 @@ function startStory(key) {
   gameEl.classList.add('opening');
   gameEl.classList.remove('hidden');
   updateOfflineBtn();
-  langSwitchEl.classList.add('hidden'); // на время чтения скрыт — освобождает место в верхней панели, переключить язык всё равно нельзя без выхода в меню
   topRightEl.appendChild(themeBtn); // кнопка темы переезжает в один ряд с паузой/звуком на время чтения
   fitHeartLabels(); // сердца только что стали видимыми — раньше clientWidth был 0, подгонка текста не сработала бы
   startBackgroundAudioService(character.name);
@@ -1217,9 +1271,16 @@ async function renderCurrent() {
     // Автовозврат в меню без клика — backToMenu() сам прокручивает список к карточке только что
     // пройденной истории (см. её код), а не сбрасывает список наверх. Время увеличено с 1.6с до 7с —
     // раньше не хватало времени даже заметить кнопку "Поделиться", не то что нажать её.
+    // В режиме "слушать все подряд" вместо возврата в меню — сразу следующая непройденная история;
+    // если пройдены уже все, марафон сам завершается обычным возвратом в меню.
     const myToken = revealToken;
     setTimeout(() => {
       if (myToken !== revealToken) return; // пользователь уже сам ушёл раньше
+      if (continuousListenMode) {
+        const nextKey = pickReminderStory();
+        if (nextKey) { startStory(nextKey); return; }
+        continuousListenMode = false;
+      }
       backToMenu();
     }, 7000);
   }
@@ -1227,6 +1288,7 @@ async function renderCurrent() {
 }
 
 function backToMenu() {
+  continuousListenMode = false; // ручной выход (или клик "История завершена.") всегда останавливает марафон
   if (tabBarEl) tabBarEl.classList.remove('hidden');
   revealToken += 1; // отменяет любую ещё доигрывающую печать/озвучку прежней истории
   // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через pause(), новых
@@ -1237,8 +1299,6 @@ function backToMenu() {
   gameEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
   updateOfflineBtn();
-  basedOnEl.parentNode.insertBefore(langSwitchEl, basedOnEl); // переключатель языка возвращается под заголовок
-  langSwitchEl.classList.remove('hidden');
   document.body.insertBefore(themeBtn, mainEl); // кнопка темы возвращается в свой обычный плавающий угол
   basedOnEl.classList.remove('hidden');
   basedOnEl.textContent = ''; // иначе "по мотивам..." останется висеть под заголовком и в меню
@@ -1340,11 +1400,22 @@ function renderProfile() {
       <div class="profile-section-title">${t('profileCompletedSection')}</div>
       ${rows || `<div class="profile-empty">${t('profileEmpty')}</div>`}
     </div>
+    <button type="button" class="profile-cta" id="profileListenAllBtn">${t('profileListenAll')}</button>
     <button type="button" class="profile-cta" id="profileShareBtn">${t('profileShare')}</button>
+    <div>
+      <div class="profile-section-title">${t('profileLangLabel')}</div>
+      <div id="profileLangRow"></div>
+    </div>
   `;
   document.getElementById('profileGreetingText').textContent = getProfileName() ? t('profileGreeting').replace('{name}', getProfileName()) : t('profileTitle');
   const shareBtn = document.getElementById('profileShareBtn');
   if (shareBtn) shareBtn.addEventListener('click', () => { window.location.href = 'share-story.html'; });
+  const listenAllBtn = document.getElementById('profileListenAllBtn');
+  if (listenAllBtn) listenAllBtn.addEventListener('click', startContinuousListen);
+  // langSwitchEl — тот же самый узел, что жил наверху страницы до входа в приложение (см. enterApp);
+  // innerHTML выше уже уничтожил его прошлое место в DOM, appendChild просто переприкрепляет заново.
+  document.getElementById('profileLangRow').appendChild(langSwitchEl);
+  langSwitchEl.classList.remove('hidden');
 }
 renderLangSwitch();
 applyStaticText();
