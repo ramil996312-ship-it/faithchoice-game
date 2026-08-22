@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
   * { box-sizing: border-box; }
+  .hidden { display: none !important; }
   :root {
     --accent: #C9A227; --accent2: #6B2737;
     --bg: #170D18; --text: #F2E8D6; --text-dim: #B7A98F;
@@ -21,28 +22,44 @@
   main { width: 100%; max-width: 560px; }
   h1 { font-size: 1.35rem; font-weight: normal; text-align: center; color: var(--accent); margin-bottom: 0.4rem; }
   .sub { text-align: center; color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.6rem; }
+  h2.section-title { font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); margin: 1.8rem 0 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
   label { display: block; font-size: 0.9rem; color: var(--text-dim); margin: 1.1rem 0 0.35rem; }
   input[type="text"], input[type="email"], select, textarea {
     width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text);
     font-family: inherit; font-size: 0.95rem; padding: 0.6rem 0.7rem; border-radius: 6px;
   }
   textarea { resize: vertical; min-height: 160px; }
-  .dictate-row { display: flex; gap: 0.5rem; align-items: flex-start; }
-  .dictate-row textarea { flex: 1; }
+
+  .radio-row { display: flex; flex-direction: column; gap: 0.5rem; }
+  .radio-row label { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 0.9rem; color: var(--text); cursor: pointer; }
+  .radio-row input { margin: 0; flex: none; }
+
+  .dictate-row textarea { width: 100%; }
+  .mic-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+  /* Раньше был голый круглый значок без подписи — по совету психолога заменено на текстовую кнопку
+     с состоянием и таймером, чтобы было однозначно, что происходит прямо сейчас (человек в
+     диссоциации/стрессе легче ошибается с неподписанными иконками). */
   #micBtn {
-    flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1.5px solid var(--accent);
-    background: var(--surface); color: var(--accent); font-size: 1.1rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm);
+    flex: none; border: 1.5px solid var(--accent); background: var(--surface); color: var(--accent);
+    font-family: inherit; font-size: 0.88rem; font-weight: bold; cursor: pointer;
+    padding: 0.55rem 1rem; border-radius: 8px; box-shadow: var(--shadow-sm);
     transition: background 0.15s, color 0.15s;
   }
   #micBtn.recording { background: var(--accent2); border-color: var(--accent2); color: #fff; animation: pulse 1.2s infinite; }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(107,39,55,0.5); } 50% { box-shadow: 0 0 0 8px rgba(107,39,55,0); } }
-  #micHint { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.3rem; }
-  .check-row { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 1.2rem; }
-  .check-row input { margin-top: 0.25rem; }
+  #micClearBtn {
+    flex: none; border: 1px solid var(--border); background: none; color: var(--text-dim);
+    font-family: inherit; font-size: 0.85rem; cursor: pointer; padding: 0.55rem 0.9rem; border-radius: 8px;
+  }
+  #micClearBtn:hover { border-color: var(--accent2); color: var(--accent2); }
+  #micHint { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
+
+  .check-row { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 0.9rem; }
+  .check-row input { margin-top: 0.25rem; flex: none; }
   .check-row label { margin: 0; font-size: 0.85rem; color: var(--text-dim); }
+
   .submit-btn {
-    margin-top: 1.5rem; width: 100%; background: linear-gradient(180deg,
+    margin-top: 1.6rem; width: 100%; background: linear-gradient(180deg,
       color-mix(in srgb, var(--accent) 80%, white 20%) 0%, var(--accent) 55%,
       color-mix(in srgb, var(--accent) 82%, black 18%) 100%);
     color: var(--btn-text); border: none; border-radius: 8px; padding: 0.8rem 1rem;
@@ -50,10 +67,20 @@
     box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, black 45%), var(--shadow-sm);
   }
   .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .note {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
     border-radius: 4px; padding: 0.8rem 1rem; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.4rem;
   }
+  .note ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+  .note li { margin-bottom: 0.35rem; }
+  .note li:last-child { margin-bottom: 0; }
+  .crisis-note {
+    background: var(--surface); border: 1px solid var(--accent2); border-left: 3px solid var(--accent2);
+    border-radius: 4px; padding: 0.8rem 1rem; font-size: 0.85rem; color: var(--text-dim); margin: 1.4rem 0;
+  }
+  .withdraw-note { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.6rem; }
+
   a { color: var(--accent); }
   a:hover { color: color-mix(in srgb, var(--accent) 75%, white 25%); }
   .back {
@@ -69,14 +96,30 @@
   <p class="sub">Мы читаем каждое сообщение сами — истории не публикуются автоматически.</p>
 
   <div class="note">
-    Перед публикацией мы всегда связываемся с автором по указанному контакту, чтобы подтвердить историю и
-    получить согласие на конкретную формулировку. Без этого — не публикуем.
+    Как это устроено, по-простому:
+    <ul>
+      <li>Письмо получает и читает лично автор проекта — не команда модераторов, не автоматическая система.</li>
+      <li>Прежде чем что-либо опубликовать, мы обязательно свяжемся с вами и пришлём финальный текст на согласование — без вашего явного «да» ничего не публикуется.</li>
+      <li>Контакт для связи, который вы укажете, никогда не публикуется вместе с историей — он нужен только чтобы с вами связаться.</li>
+      <li>Сообщение хранится у нас, пока идёт работа над историей и какое-то время после (на случай, если понадобится снова с вами связаться). Вы можете в любой момент попросить удалить его — просто напишите на <a href="mailto:hello@faithchoice.net">hello@faithchoice.net</a>.</li>
+    </ul>
+  </div>
+
+  <div class="crisis-note">
+    Если вам прямо сейчас угрожает опасность или по-настоящему тяжело — эта форма не замена экстренной помощи. Пожалуйста, обратитесь к близкому человеку или в службу экстренной/психологической помощи в вашей стране.
   </div>
 
   <form id="storyForm">
-    <label for="fName">Ваше имя (можно оставить пустым — опубликуем анонимно)</label>
+    <h2 class="section-title">Как вас показать</h2>
+    <label>Как подписать историю, если мы её опубликуем?</label>
+    <div class="radio-row">
+      <label><input type="radio" name="nameMode" value="real" checked> Моим настоящим именем</label>
+      <label><input type="radio" name="nameMode" value="pseudonym"> Псевдонимом (не настоящее имя)</label>
+      <label><input type="radio" name="nameMode" value="anon"> Анонимно, без имени</label>
+    </div>
     <input type="text" id="fName" placeholder="Например, Мария">
 
+    <h2 class="section-title">Ваша история</h2>
     <label for="fCategory">Тема истории</label>
     <select id="fCategory">
       <option value="">Не уверен(а) / другое</option>
@@ -93,20 +136,42 @@
       <option>Особые дети/семья</option>
     </select>
 
-    <label for="fStory">Ваша история</label>
+    <label for="fStory">Расскажите, что произошло и как вера сыграла в этом роль</label>
     <div class="dictate-row">
-      <textarea id="fStory" placeholder="Расскажите, что произошло и как вера сыграла в этом роль…" required></textarea>
-      <button type="button" id="micBtn" title="Надиктовать голосом">🎤</button>
+      <textarea id="fStory" placeholder="Можно написать самостоятельно или надиктовать голосом кнопкой ниже…" required></textarea>
     </div>
-    <div id="micHint">Нажмите на микрофон и начните говорить — текст добавится в поле.</div>
+    <div class="mic-row">
+      <button type="button" id="micBtn">🎤 Начать запись</button>
+      <button type="button" id="micClearBtn" class="hidden">Удалить надиктованное</button>
+    </div>
+    <div id="micHint">Текст появляется в поле сразу по ходу надиктовки — после остановки проверьте и поправьте его вручную перед отправкой, это и есть предпросмотр.</div>
 
     <label for="fContact">Контакт для связи (email или телефон)</label>
     <input type="text" id="fContact" placeholder="you@example.com" required>
 
     <div class="check-row">
-      <input type="checkbox" id="fConsent" required>
-      <label for="fConsent">Я согласен(на), что моя история может быть опубликована на сайте (после связи со мной для подтверждения).</label>
+      <input type="checkbox" id="fPhoto">
+      <label for="fPhoto">Я планирую прислать фото и разрешаю использовать его при публикации (пришлю отдельным письмом после того, как вы со мной свяжетесь).</label>
     </div>
+
+    <h2 class="section-title">Согласия</h2>
+    <div class="check-row">
+      <input type="checkbox" id="cContact" required>
+      <label for="cContact">Согласен(на), что вы свяжетесь со мной по указанному контакту, чтобы обсудить историю.</label>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="cStore" required>
+      <label for="cStore">Согласен(на) на хранение и обработку присланного текста, пока идёт работа над историей.</label>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="cPublish" required>
+      <label for="cPublish">Согласен(на), что история может быть опубликована на сайте — после того как я подтвержу финальный текст.</label>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="cEdit" required>
+      <label for="cEdit">Согласен(на), что текст может быть отредактирован/сокращён для публикации (итоговый вариант я увижу и подтвержу до публикации).</label>
+    </div>
+    <p class="withdraw-note">Вы можете отозвать любое из этих согласий в любой момент до публикации — просто напишите на hello@faithchoice.net.</p>
 
     <button type="submit" class="submit-btn">Отправить</button>
   </form>
@@ -114,7 +179,24 @@
   <a class="back" href="index.html">← Вернуться к историям</a>
 </main>
 <script>
+  const nameModeInputs = document.querySelectorAll('input[name="nameMode"]');
+  const fName = document.getElementById('fName');
+  function applyNameMode() {
+    const mode = document.querySelector('input[name="nameMode"]:checked').value;
+    if (mode === 'anon') {
+      fName.value = '';
+      fName.disabled = true;
+      fName.placeholder = 'Имя не нужно — история будет анонимной';
+    } else {
+      fName.disabled = false;
+      fName.placeholder = mode === 'pseudonym' ? 'Например, вымышленное имя' : 'Например, Мария';
+    }
+  }
+  nameModeInputs.forEach(r => r.addEventListener('change', applyNameMode));
+  applyNameMode();
+
   const micBtn = document.getElementById('micBtn');
+  const micClearBtn = document.getElementById('micClearBtn');
   const story = document.getElementById('fStory');
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognizing = false, recognition = null;
@@ -125,15 +207,28 @@
   let userWantsRecording = false;
   // baseText — то, что уже было в поле до текущего нажатия на микрофон (ручной ввод или предыдущая
   // надиктовка); finalizedThisSession — куски ТЕКУЩЕЙ сессии движка, уже подтверждённые как
-  // окончательные. Сбрасываются заново при каждом (пере)старте recognition.start().
+  // окончательные. Сбрасываются заново при каждом (пере)старте recognition.start(). Тот же baseText
+  // используется кнопкой "Удалить надиктованное" — откатывает поле к состоянию до последнего запуска.
   let baseText = '', finalizedThisSession = '';
-  // Раньше при паузе после ОКОНЧАНИЯ надиктовки (пользователь молчит и уже перешёл к другим полям
-  // формы) сессия перезапускалась бесконечно каждые ~3с молчания — щелчок звучал вечно, пока
-  // человек сам не вспоминал нажать на микрофон повторно. gotSpeechThisSession отслеживает, было ли
-  // хоть что-то сказано с последнего (пере)запуска: если движок оборвал сессию, а за всё это время
-  // не было ни одного результата — это не короткая пауза внутри фразы, а окончание диктовки, и нужно
-  // остановиться по-настоящему, а не перезапускать вслепую.
   let gotSpeechThisSession = false;
+  // Таймер записи — показывает прошедшее время прямо в подписи кнопки ("Остановить (00:07)"), чтобы
+  // было понятно, что запись реально идёт, без отдельного скрытого состояния.
+  let recordingStartedAt = 0, timerHandle = null;
+  function formatElapsed(ms) {
+    const s = Math.floor(ms / 1000);
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function startTimer() {
+    recordingStartedAt = Date.now();
+    micBtn.textContent = '⏹ Остановить (00:00)';
+    timerHandle = setInterval(() => {
+      micBtn.textContent = '⏹ Остановить (' + formatElapsed(Date.now() - recordingStartedAt) + ')';
+    }, 500);
+  }
+  function stopTimer() {
+    clearInterval(timerHandle);
+    timerHandle = null;
+  }
   if (SR) {
     recognition = new SR();
     recognition.lang = 'ru-RU';
@@ -180,7 +275,7 @@
         gotSpeechThisSession = false;
         setTimeout(() => {
           if (!userWantsRecording) return; // пользователь успел нажать "стоп" за время задержки
-          try { recognition.start(); } catch { userWantsRecording = false; recognizing = false; micBtn.classList.remove('recording'); }
+          try { recognition.start(); } catch { userWantsRecording = false; recognizing = false; micBtn.classList.remove('recording'); stopTimer(); micBtn.textContent = '🎤 Начать запись'; }
         }, 200);
       } else {
         // Либо пользователь сам остановил запись, либо за весь последний перезапуск не было сказано
@@ -188,6 +283,8 @@
         // по-настоящему, а не перезапускаем вслепую (иначе звучал бы щелчок каждые ~3с бесконечно,
         // даже когда человек давно закончил и заполняет другие поля формы).
         userWantsRecording = false; recognizing = false; micBtn.classList.remove('recording');
+        stopTimer(); micBtn.textContent = '🎤 Начать запись';
+        if (story.value.trim()) micClearBtn.classList.remove('hidden');
       }
     };
     // Раньше ошибка гасилась молча — кнопка просто гасла без объяснений, выглядело как "ничего не
@@ -208,6 +305,7 @@
       if (e.error === 'no-speech' && userWantsRecording) return;
       userWantsRecording = false;
       recognizing = false; micBtn.classList.remove('recording');
+      stopTimer(); micBtn.textContent = '🎤 Начать запись';
       document.getElementById('micHint').textContent =
         ERROR_HINTS[e.error] || ('Голосовой ввод не сработал (' + e.error + ') — используйте клавиатуру.');
     };
@@ -223,16 +321,29 @@
     finalizedThisSession = '';
     gotSpeechThisSession = false;
     recognizing = true; micBtn.classList.add('recording'); recognition.start();
+    startTimer();
+    micClearBtn.classList.add('hidden');
+  });
+  micClearBtn.addEventListener('click', () => {
+    story.value = baseText;
+    micClearBtn.classList.add('hidden');
   });
 
   document.getElementById('storyForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = document.getElementById('fName').value.trim() || 'Аноним';
+    const nameMode = document.querySelector('input[name="nameMode"]:checked').value;
+    const nameModeLabel = { real: 'настоящее имя', pseudonym: 'псевдоним', anon: 'анонимно' }[nameMode];
+    const name = nameMode === 'anon' ? 'Аноним' : (fName.value.trim() || 'Аноним');
     const category = document.getElementById('fCategory').value || 'не указана';
     const contact = document.getElementById('fContact').value.trim();
     const text = story.value.trim();
+    const wantsPhoto = document.getElementById('fPhoto').checked ? 'да, пришлю отдельно' : 'нет';
     const subject = 'Своя история для "Историй Веры" — ' + name;
-    const body = 'Имя: ' + name + '\nТема: ' + category + '\nКонтакт: ' + contact +
+    const body = 'Имя: ' + name + ' (' + nameModeLabel + ')' +
+      '\nТема: ' + category +
+      '\nКонтакт: ' + contact +
+      '\nФото: ' + wantsPhoto +
+      '\n\nСогласия: на связь — да; на хранение — да; на публикацию — да; на редактуру — да.' +
       '\n\nИстория:\n' + text;
     window.location.href = 'mailto:hello@faithchoice.net?subject=' + encodeURIComponent(subject) +
       '&body=' + encodeURIComponent(body);
