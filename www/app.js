@@ -129,6 +129,18 @@ function getCompletedAt() {
   try { return JSON.parse(localStorage.getItem('completedAt') || '{}'); }
   catch { return {}; }
 }
+// Отметка "история открыта" — нужна только для факта "в процессе" в профиле (открыта, но не
+// дослушана до конца), не влияет на игровую логику.
+function getStarted() {
+  try { return new Set(JSON.parse(localStorage.getItem('startedStories') || '[]')); }
+  catch { return new Set(); }
+}
+function markStarted(key) {
+  const started = getStarted();
+  if (started.has(key)) return;
+  started.add(key);
+  try { localStorage.setItem('startedStories', JSON.stringify([...started])); } catch {}
+}
 // Сколько раз слушатель выбирал светлый/тёмный путь — считаем по каждому реальному клику на
 // развилке (не только по финалу истории), это и есть "твои решения" в профиле.
 function getChoiceCounts() {
@@ -978,6 +990,7 @@ function updateMenuProgress(completed) {
 function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
   ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
+  markStarted(key);
   currentKey = key;
   const character = content().CHARACTERS.find(c => c.key === key);
   story = new Engine.Story(content().STORIES[key]);
@@ -1263,9 +1276,8 @@ function renderProfile() {
   const endings = getCompletedEndings();
   const counts = getChoiceCounts();
   const totalDecisions = counts.light + counts.dark;
-  const lightPct = totalDecisions ? Math.round((counts.light / totalDecisions) * 100) : 50;
-  const darkPct = 100 - lightPct;
   const totalStories = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
+  const inProgress = Math.max(0, getStarted().size - completed.size);
 
   const rows = content().CHARACTERS
     .filter(c => content().STORIES[c.key] && completed.has(c.key))
@@ -1289,21 +1301,10 @@ function renderProfile() {
       </label>
       <div><h2 id="profileGreetingText" onclick="editProfileName()" style="cursor:pointer"></h2></div>
     </div>
-    <div class="profile-stats">
+    <div class="profile-stats profile-stats-3">
       <div class="profile-stat"><div class="num">${completed.size}</div><div class="label">${t('profileStoriesLabel').replace('{total}', totalStories)}</div></div>
+      <div class="profile-stat"><div class="num">${inProgress}</div><div class="label">${t('profileInProgressLabel')}</div></div>
       <div class="profile-stat"><div class="num">${totalDecisions}</div><div class="label">${t('profileDecisionsLabel')}</div></div>
-    </div>
-    <div>
-      <div class="profile-section-title">${t('profileYourChoices')}</div>
-      <div class="profile-bar">
-        ${counts.light ? `<div class="profile-bar-light" style="width:${lightPct}%">${lightPct}%</div>` : ''}
-        ${counts.dark ? `<div class="profile-bar-dark" style="width:${darkPct}%">${darkPct}%</div>` : ''}
-        ${totalDecisions ? '' : `<div class="profile-bar-light" style="width:100%;background:var(--border);color:var(--text-dim)">—</div>`}
-      </div>
-      <div class="profile-bar-labels">
-        <span class="profile-heart heart-light"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#F2E8D6" stroke="#C9A227" stroke-width="1"/></svg><span class="heart-text">${t('light')}</span></span>
-        <span class="profile-heart heart-dark"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="#3B2A20" stroke="#8C6318" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="heart-text">${t('dark')}</span></span>
-      </div>
     </div>
     <div>
       <div class="profile-section-title">${t('profileCompletedSection')}</div>
