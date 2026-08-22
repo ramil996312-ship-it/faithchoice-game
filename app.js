@@ -912,7 +912,7 @@ function renderContinueCard() {
     <div class="continue-text">
       <div class="continue-label">${t('continueLabel')}</div>
       <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
-      <div class="card-theme">${c.theme}</div>
+      <div class="card-theme">${c.softTheme || c.theme}</div>
       <button type="button" class="continue-cta">${t('continueCta')}</button>
     </div>
     <div class="card-icon continue-icon">${icon}</div>`;
@@ -953,7 +953,7 @@ function renderMenu() {
        <div class="card-text">
          <div class="card-cat">${catLabel}</div>
          <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
-         <div class="card-theme">${c.theme}</div>
+         <div class="card-theme">${c.softTheme || c.theme}</div>
        </div>
        <div class="card-icon">${icon}${badge}</div>
      </button>`;
@@ -985,7 +985,7 @@ function startStory(key) {
   basedOnEl.textContent = t('basedOnTrue');
   basedOnEl.classList.add('hidden'); // на время чтения скрыта — освобождает строку под заголовком
   titleEl.textContent = character.name;
-  themeEl.textContent = character.theme;
+  themeEl.textContent = character.softTheme || character.theme;
   const startColor = colorForTheme(character.color);
   document.documentElement.style.setProperty('--accent', startColor);
   document.documentElement.style.setProperty('--btn-text', readableTextOn(startColor));
