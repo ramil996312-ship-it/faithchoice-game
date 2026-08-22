@@ -971,6 +971,7 @@ function renderCatChips() {
 
 function renderMenu() {
   const completed = getCompleted();
+  const started = getStarted();
   // По умолчанию — раскрытая книга с венцом сверху (образ "герой веры"), одного золотого цвета
   // для всех историй (--icon-gold, не зависит от личного цвета персонажа — как оклад иконы).
   // c.icon по-прежнему можно задать отдельно на персонажа, если для кого-то понадобится исключение.
@@ -982,14 +983,17 @@ function renderMenu() {
     const available = !!content().STORIES[c.key];
     const done = completed.has(c.key);
     const badge = done ? `<span class="icon-badge" title="${t('storyDone')}">✓</span>` : '';
-    const catLabel = t(CATEGORY_I18N_KEY[CATEGORY_BY_KEY[c.key]] || 'catAll');
+    // Обложка карточки по совету дизайнера — один путь взгляда: фото, имя, мягкая тема, статус
+    // (текстом, не только цветной галочкой — иначе недоступно тем, кто не различает цвет), действие.
+    // Категория с обложки убрана (она уже есть в чипах-фильтрах сверху), символ пола — второстепенный.
+    const statusText = done ? t('storyDone') : started.has(c.key) ? t('profileInProgressLabel') : '';
     const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
     return `<button class="card${available ? '' : ' card-soon'}${done ? ' card-done' : ''}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
        <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
        <div class="card-text">
-         <div class="card-cat">${catLabel}</div>
          <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
          <div class="card-theme">${c.softTheme || c.theme}</div>
+         ${statusText ? `<div class="card-status">${statusText}</div>` : ''}
        </div>
        <div class="card-icon">${icon}${badge}</div>
      </button>`;
@@ -1145,18 +1149,13 @@ async function renderCurrent() {
       const btn = document.createElement('button');
       btn.textContent = choice.label;
       btn.style.transitionDelay = (i * 0.08) + 's';
-      // Кнопки красятся не в цвет персонажа, а по направлению выбора — красный (тьма) / зелёный
-      // (свет), тот же смысл, что и у сердец/полоски веры, чтобы "неправильный" и "правильный"
-      // ответ были визуально различимы, а не оба одного нейтрального цвета. Направление берём из
-      // знака effects.faith у КОНКРЕТНОГО варианта, а не из позиции кнопки (см. pulseHeart выше —
-      // варианты не всегда идут в порядке "сначала светлый").
+      // По совету психолога (не заранее красить кнопки в "правильный/неправильный" цвет — во время
+      // самого выбора оценки быть не должно, иначе интерфейс говорит "ты нажал не туда, значит ты
+      // тьма"). Кнопки остаются нейтральными, в цвете персонажа (--accent), как обычные кнопки.
+      // Направление всё равно нужно после клика — для сердца/стрелки/счётчика (см. ниже), поэтому
+      // dir по-прежнему считаем из знака effects.faith у конкретного варианта.
       const delta = choice.effects && choice.effects.faith;
       const dir = delta > 0 ? 'light' : delta < 0 ? 'dark' : null;
-      if (dir) {
-        const bg = dir === 'light' ? '#34c9a3' : '#e2574c';
-        btn.style.background = bg;
-        btn.style.color = readableTextOn(bg);
-      }
       btn.addEventListener('click', async () => {
         if (dir) {
           pulseHeart(dir);
