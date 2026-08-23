@@ -1225,6 +1225,16 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === '2' && buttons[1]) buttons[1].click();
 });
 
+// Список историй теперь горизонтальный (#menu) — на телефоне это работает само (тач-свайп), но
+// обычное колесо мыши на компьютере крутит только вертикально и по горизонтальному ряду ничего не
+// двигает. Переводим вертикальный скролл в горизонтальный, пока курсор над списком. deltaX у
+// трекпада/наклонного колеса уже даёт настоящий горизонтальный жест — тогда просто не мешаем ему.
+menuEl.addEventListener('wheel', (e) => {
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  menuEl.scrollLeft += e.deltaY;
+  e.preventDefault();
+}, { passive: false });
+
 async function renderCurrent() {
   isPaused = false; // новая сцена начинается не на паузе, даже если предыдущая была поставлена
   updatePauseBtn();
