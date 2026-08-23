@@ -35,6 +35,15 @@
   .radio-row input { margin: 0; flex: none; }
 
   .dictate-row textarea { width: 100%; }
+  /* Большое пустое поле пугает — чипы дают затравку-фразу, чтобы не начинать с чистого листа. */
+  .story-prompts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .story-prompts-label { font-size: 0.8rem; color: var(--text-dim); margin-right: 0.2rem; }
+  .prompt-chip {
+    background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 999px;
+    padding: 0.3rem 0.75rem; font-family: inherit; font-size: 0.82rem; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .prompt-chip:hover { border-color: var(--accent); color: var(--accent); }
   .mic-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
   /* Раньше был голый круглый значок без подписи — по совету психолога заменено на текстовую кнопку
      с состоянием и таймером, чтобы было однозначно, что происходит прямо сейчас (человек в
@@ -137,6 +146,12 @@
     </select>
 
     <label for="fStory">Расскажите, что произошло и как вера сыграла в этом роль</label>
+    <div class="story-prompts">
+      <span class="story-prompts-label">Не знаете, с чего начать?</span>
+      <button type="button" class="prompt-chip" data-starter="Когда я потерял(а) близкого человека, ">Потеря близкого</button>
+      <button type="button" class="prompt-chip" data-starter="В моей жизни было то, что я могу назвать только чудом: ">Чудо</button>
+      <button type="button" class="prompt-chip" data-starter="Путь к исцелению начался для меня с ">Исцеление</button>
+    </div>
     <div class="dictate-row">
       <textarea id="fStory" placeholder="Можно написать самостоятельно или надиктовать голосом кнопкой ниже…" required></textarea>
     </div>
@@ -179,6 +194,18 @@
   <a class="back" href="index.html">← Вернуться к историям</a>
 </main>
 <script>
+  // Чипы-подсказки — вставляют затравку в конец поля (с новой строки, если там уже что-то есть) и
+  // переводят фокус в конец textarea, дальше человек просто продолжает печатать сам.
+  document.querySelectorAll('.prompt-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fStory = document.getElementById('fStory');
+      const starter = btn.dataset.starter;
+      fStory.value = fStory.value.trim() ? fStory.value.replace(/\s*$/, '') + '\n\n' + starter : starter;
+      fStory.focus();
+      fStory.setSelectionRange(fStory.value.length, fStory.value.length);
+    });
+  });
+
   const nameModeInputs = document.querySelectorAll('input[name="nameMode"]');
   const fName = document.getElementById('fName');
   function applyNameMode() {
