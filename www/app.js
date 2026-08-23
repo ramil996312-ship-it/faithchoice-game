@@ -1046,7 +1046,7 @@ function renderMenu() {
     const statusText = done ? t('storyDone') : started.has(c.key) ? t('profileInProgressLabel') : '';
     const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
     return `<button class="card${available ? '' : ' card-soon'}${done ? ' card-done' : ''}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
-       <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
+       <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'"></div>
        <div class="card-text">
          <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
          <div class="card-theme">${c.softTheme || c.theme}</div>
@@ -1244,6 +1244,12 @@ let dragMoved = false;  // реально сдвинули (за порог) —
 let dragStartX = 0;
 let dragStartScrollLeft = 0;
 const DRAG_CLICK_THRESHOLD = 5; // px
+
+// У <img> в браузере по умолчанию включено нативное HTML5-перетаскивание (то, что позволяет
+// вытащить картинку из страницы) — оно перехватывает жест раньше mousemove ниже и полностью глушит
+// наш драг именно тогда, когда хватаешь за фото карточки (draggable="false" на самом <img> в
+// разметке уже стоит, это доп. страховка на случай других перетаскиваемых элементов внутри карточки).
+menuEl.addEventListener('dragstart', (e) => e.preventDefault());
 
 menuEl.addEventListener('mousedown', (e) => {
   dragActive = true;
