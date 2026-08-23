@@ -851,11 +851,13 @@
   .profile-stat { background: var(--surface); padding: 0.9rem 0.5rem; text-align: center; }
   .profile-stat .num { font-size: 1.9rem; font-weight: bold; color: var(--icon-gold); line-height: 1; }
   .profile-stat .label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.3rem; }
-  .profile-section-title { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 0.4rem; }
-  .profile-bar { display: flex; height: 1.6rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
-  .profile-bar-light, .profile-bar-dark { display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: bold; color: #fff; }
-  .profile-bar-light { background: #34c9a3; }
-  .profile-bar-dark { background: #6B2737; }
+  /* Верхняя линия+отступ превращают заголовок в настоящий разделитель между секциями профиля —
+     раньше секции отбивались только гэпом флекс-контейнера (#profileScreen), без визуального якоря,
+     глаз "плыл" от статистики сразу в список без паузы. */
+  .profile-section-title {
+    font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim);
+    margin: 0 0 0.4rem; padding-top: 0.9rem; border-top: 1px solid var(--border);
+  }
   .profile-bar-labels { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
   .profile-heart { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 3.4rem; height: 3.2rem; flex-shrink: 0; }
   .profile-heart .heart-text { font-size: 0.78rem; }
