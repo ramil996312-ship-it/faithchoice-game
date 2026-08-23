@@ -102,6 +102,7 @@ const continueCardEl = document.getElementById('continueCard');
 const catChipsEl = document.getElementById('catChips');
 const storiesScreenEl = document.getElementById('storiesScreen');
 const profileScreenEl = document.getElementById('profileScreen');
+const storyWarningEl = document.getElementById('storyWarning'); // отсутствует на reserve-preview.html
 const tabBarEl = document.getElementById('tabBar');
 const reminderRowEl = document.getElementById('reminderRow');
 const reminderLabelEl = document.getElementById('reminderLabel');
@@ -789,6 +790,10 @@ function applyStaticText() {
   } else {
     document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
   }
+  if (storyWarningEl) {
+    document.getElementById('btnStoryWarningContinue').textContent = t('storyWarningContinue');
+    document.getElementById('btnStoryWarningSkip').textContent = t('storyWarningSkip');
+  }
   if (isNative && reminderRowEl && !reminderRowEl.classList.contains('hidden')) reminderLabelEl.textContent = t('reminderLabel');
   muteBtn.title = t('soundLabel');
   document.getElementById('verseModalClose').setAttribute('aria-label', t('closeVerse'));
@@ -1067,9 +1072,78 @@ function updateMenuProgress(completed) {
   menuProgressEl.classList.remove('hidden');
 }
 
+// Хранит ключи историй, для которых точечное предупреждение о теме уже было показано и принято —
+// не мучаем повторным предупреждением при перечитывании/продолжении той же самой истории. Отдельная
+// сущность от localStorage 'ageGateAccepted' (тот — про сайт целиком, этот — про конкретный сюжет).
+function getWarnedStories() {
+  try { return new Set(JSON.parse(localStorage.getItem('storyWarningsSeen') || '[]')); }
+  catch (e) { return new Set(); }
+}
+function markStoryWarned(key) {
+  const seen = getWarnedStories();
+  seen.add(key);
+  localStorage.setItem('storyWarningsSeen', JSON.stringify(Array.from(seen)));
+}
+
 function startStory(key) {
   if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
-  ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя
+  // В режиме "слушать все истории подряд" (continuousListenMode) показ предупреждения перед каждой
+  // следующей историей сломал бы саму идею hands-off марафона — вход в этот режим сам по себе явный
+  // клик, а общее предупреждение о тяжёлых темах читатель уже видел на ageGate. storyWarningEl может
+  // отсутствовать (reserve-preview.html без экрана приветствия) — тогда тоже сразу в историю.
+  if (continuousListenMode || !storyWarningEl || getWarnedStories().has(key)) {
+    beginStoryPlay(key);
+    return;
+  }
+  showStoryWarning(key);
+}
+
+// Точечное предупреждение про тему конкретной истории (в отличие от общего ageGate на входе в сайт) —
+// пункт из брифа дизайнера/психолога: во время выбора оценки быть не должно, а вот ПЕРЕД стартом
+// читатель должен иметь возможность понять, о чём история, и уйти без обязательства читать. Текст
+// берём из уже переведённого на все 5 языков character.theme (прямая, не смягчённая формулировка —
+// то же, что раньше было на карточке до softTheme, здесь как раз уместно, т.к. решение осознанное).
+function showStoryWarning(key) {
+  const character = content().CHARACTERS.find(c => c.key === key);
+  const startColor = colorForTheme(character.color);
+  document.documentElement.style.setProperty('--accent', startColor);
+  document.documentElement.style.setProperty('--btn-text', readableTextOn(startColor));
+  document.getElementById('storyWarningTitle').textContent = t('storyWarningTitle');
+  document.getElementById('storyWarningBody').textContent = t('storyWarningBody').replace('{theme}', character.theme);
+  menuEl.classList.add('hidden');
+  if (menuProgressEl) menuProgressEl.classList.add('hidden');
+  if (continueCardEl) continueCardEl.classList.add('hidden');
+  if (catChipsEl) catChipsEl.classList.add('hidden');
+  if (tabBarEl) tabBarEl.classList.add('hidden');
+  storyWarningEl.classList.remove('hidden');
+  const continueBtn = document.getElementById('btnStoryWarningContinue');
+  const skipBtn = document.getElementById('btnStoryWarningSkip');
+  // removeEventListener в cleanup() — иначе при повторном открытии предупреждения (другая история)
+  // на кнопках накапливались бы старые обработчики с чужим key из прошлого вызова.
+  function cleanup() {
+    storyWarningEl.classList.add('hidden');
+    continueBtn.removeEventListener('click', onContinue);
+    skipBtn.removeEventListener('click', onSkip);
+  }
+  function onContinue() {
+    cleanup();
+    markStoryWarned(key);
+    beginStoryPlay(key);
+  }
+  function onSkip() {
+    cleanup();
+    document.documentElement.style.removeProperty('--accent');
+    document.documentElement.style.removeProperty('--btn-text');
+    if (tabBarEl) tabBarEl.classList.remove('hidden');
+    menuEl.classList.remove('hidden');
+    renderMenu(); // как в backToMenu() — сам решит видимость menuProgress/continueCard/catChips
+  }
+  continueBtn.addEventListener('click', onContinue);
+  skipBtn.addEventListener('click', onSkip);
+}
+
+function beginStoryPlay(key) {
+  ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя (Продолжить/карточка)
   markStarted(key);
   // В обычном режиме сбрасывается на каждую новую историю (активное решение читателя). В режиме
   // "слушать все подряд" (continuousListenMode) должен, наоборот, оставаться включённым и на
