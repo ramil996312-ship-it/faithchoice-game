@@ -489,6 +489,17 @@
     pointer-events: none;
   }
   .line-visible { opacity: 1; transform: translateY(0); }
+  /* Стих и молитва в конце истории — та же карточка, что и обычная реплика (.line), только акцент
+     всегда золотой (--icon-gold), не цвет персонажа — это уже не голос героя, а что-то поверх
+     истории. Используется одна и та же fade-in анимация (.line-visible), просто добавляется
+     последней сценой в ленту, перед кнопками "История завершена."/"Поделиться". */
+  .closing-blessing { border-left-color: var(--icon-gold); }
+  .closing-blessing-label {
+    font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--icon-gold);
+    margin: 0 0 0.5rem;
+  }
+  .closing-verse { margin: 0 0 0.7rem; font-style: italic; color: var(--text); line-height: 1.55; }
+  .closing-prayer { margin: 0; color: var(--text-dim); line-height: 1.55; }
   /* Пользователь попробовал маленькую закреплённую миниатюру в шапке вместо этого блока (не уезжает
      при прокрутке) — не понравилось внешне, попросил вернуть именно большой атмосферный блок, даже
      ценой того, что он уедет из вида по мере роста текста. Сама починка дубликата (один раз на

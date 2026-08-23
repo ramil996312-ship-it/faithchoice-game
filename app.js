@@ -1233,6 +1233,21 @@ async function renderCurrent() {
     // сюда мы попадаем только на настоящем финале, а не на каждой сцене-мостике).
     markCompleted(currentKey);
     markEndingSeen(currentKey, (story.state.faith || 0) > 0 ? 'light' : 'dark');
+    // Стих и молитва — один и тот же на оба пути (свет/тьма), про реального человека в целом, а не
+    // награда/наказание за конкретный выбор. Поля есть пока только в content-ru.js — на остальных
+    // языках character.closingVerse/closingPrayer будут undefined, и блок просто не появится, пока
+    // не переведено (без этой проверки — не значит без предупреждения, ключ closingBlessingLabel уже
+    // готов на все 5 языков заранее).
+    const character = content().CHARACTERS.find(c => c.key === currentKey);
+    if (character.closingVerse || character.closingPrayer) {
+      const blessing = document.createElement('div');
+      blessing.className = 'line closing-blessing';
+      blessing.innerHTML = `<div class="closing-blessing-label">${t('closingBlessingLabel')}</div>` +
+        (character.closingVerse ? `<p class="closing-verse">${character.closingVerse}</p>` : '') +
+        (character.closingPrayer ? `<p class="closing-prayer">${character.closingPrayer}</p>` : '');
+      feedEl.appendChild(blessing);
+      requestAnimationFrame(() => blessing.classList.add('line-visible'));
+    }
     controlsEl.innerHTML = `<button type="button" class="ended">${t('ended')}</button><button id="btnShare">${t('share')}</button>`;
     const endedBtn = controlsEl.querySelector('.ended');
     endedBtn.addEventListener('click', backToMenu);
