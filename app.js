@@ -1238,15 +1238,26 @@ async function renderCurrent() {
     // языках character.closingVerse/closingPrayer будут undefined, и блок просто не появится, пока
     // не переведено (без этой проверки — не значит без предупреждения, ключ closingBlessingLabel уже
     // готов на все 5 языков заранее).
+    // Озвучка — те же sceneId-соглашения, что и у обычных сцен (<key>_closingverse/<key>_closingprayer,
+    // см. tts-test/generate_closing_ru.js), поэтому просто переиспользуем speakAndReveal — если файла
+    // ещё нет (языки без озвучки), он сам молча откатится на печать по буквам, как и везде в игре.
+    // Два отдельных вызова (не один part-массив) — чтобы стих и молитва остались раздельными
+    // HTML-абзацами со своей вёрсткой (курсив/приглушённый цвет), а не одним сплошным textContent.
     const character = content().CHARACTERS.find(c => c.key === currentKey);
     if (character.closingVerse || character.closingPrayer) {
       const blessing = document.createElement('div');
       blessing.className = 'line closing-blessing';
-      blessing.innerHTML = `<div class="closing-blessing-label">${t('closingBlessingLabel')}</div>` +
-        (character.closingVerse ? `<p class="closing-verse">${character.closingVerse}</p>` : '') +
-        (character.closingPrayer ? `<p class="closing-prayer">${character.closingPrayer}</p>` : '');
+      blessing.innerHTML = `<div class="closing-blessing-label">${t('closingBlessingLabel')}</div>`;
+      const verseEl = document.createElement('p');
+      verseEl.className = 'closing-verse';
+      const prayerEl = document.createElement('p');
+      prayerEl.className = 'closing-prayer';
+      if (character.closingVerse) blessing.appendChild(verseEl);
+      if (character.closingPrayer) blessing.appendChild(prayerEl);
       feedEl.appendChild(blessing);
       requestAnimationFrame(() => blessing.classList.add('line-visible'));
+      if (character.closingVerse) await speakAndReveal(verseEl, [{ id: `${currentKey}_closingverse`, text: character.closingVerse }]);
+      if (character.closingPrayer) await speakAndReveal(prayerEl, [{ id: `${currentKey}_closingprayer`, text: character.closingPrayer }]);
     }
     controlsEl.innerHTML = `<button type="button" class="ended">${t('ended')}</button><button id="btnShare">${t('share')}</button>`;
     const endedBtn = controlsEl.querySelector('.ended');
