@@ -271,7 +271,9 @@
   }
   .card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card-photo svg { width: 42%; height: 42%; opacity: 0.5; }
-  #continueCard .card-photo { width: 4.4rem; height: 4.4rem; border-radius: 10px; }
+  /* Фото крупнее, чем на карточках списка ниже (после горизонтального редизайна их постер-фото
+     стало 7rem — без увеличения "Продолжить" перестала бы читаться как самая заметная карточка). */
+  #continueCard .card-photo { width: 5.4rem; height: 5.4rem; border-radius: 10px; }
   /* Карточки в горизонтальном ряду (#menu) — фото на всю ширину сверху, а не квадрат слева, и
      эмблема (.card-icon) над ним плашкой в углу вместо места в общем ряду — в узкой карточке
      ряду "фото-текст-иконка" просто не хватило бы горизонтального места. */
@@ -710,9 +712,13 @@
   }
   /* Карточка "Продолжить" — та же книгиль-эстетика, что и .card (корешок-полоса, загнутый
      уголок), но крупнее и с собственной 3D-кнопкой-CTA внутри, а не в списке контролов. */
+  /* Тёплая золотая подложка (в дополнение к золотому корешку и крупному фото выше) — карточка
+     "Продолжить" должна читаться как текущая сессия, а не просто ещё одна история в списке ниже
+     (карточки списка используют плоский var(--surface), без этого градиента). */
   #continueCard {
     display: flex; align-items: center; gap: 1rem; width: 100%; text-align: left;
-    background: var(--surface); border: 1px solid var(--border); border-left: 7px solid var(--icon-gold);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--icon-gold) 12%, var(--surface)) 0%, var(--surface) 65%);
+    border: 1px solid var(--border); border-left: 7px solid var(--icon-gold);
     border-radius: 3px 9px 4px 3px; padding: 1.1rem 1.2rem 1.1rem 1.4rem; margin-bottom: 1.1rem;
     position: relative; box-shadow: var(--shadow-sm), inset -8px 0 12px -10px rgba(0,0,0,0.5);
   }
