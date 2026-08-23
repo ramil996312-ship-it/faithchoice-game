@@ -196,8 +196,13 @@
   #menu {
     display: flex; gap: 0.75rem; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
     scroll-snap-type: x proximity; scrollbar-width: none; padding-bottom: 0.15rem;
+    cursor: grab;
   }
   #menu::-webkit-scrollbar { display: none; }
+  /* Захват-и-тащи мышью (app.js) — во время перетаскивания курсор меняется на "grabbing" и snap
+     временно отключается (иначе прерывистые снап-точки дёргали бы scrollLeft прямо под курсором). */
+  #menu.dragging { cursor: grabbing; scroll-snap-type: none; }
+  #menu .card { user-select: none; } /* иначе перетаскивание мышью выделяло бы текст карточки */
   /* Карточка истории оформлена как обложка маленькой книги — тот же принцип, что и раньше (левая
      цветная полоса + тень), просто усилен: полоса-"корешок" толще, рядом с ней тонкая линия-биговка
      (как сгиб между корешком и обложкой), справа внутренняя тень имитирует торец страниц. Сами цвета

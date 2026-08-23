@@ -1235,6 +1235,44 @@ menuEl.addEventListener('wheel', (e) => {
   e.preventDefault();
 }, { passive: false });
 
+// "Захват и тащи" мышью — тач-свайп по природе тащит контент под пальцем, а обычная мышь такого
+// нативно не умеет (перетаскивание кликом по умолчанию просто выделяет текст). mousemove/mouseup
+// повешены на document, а не на menuEl — иначе быстрый рывок мышью за пределы списка обрывал бы
+// перетаскивание на границе элемента.
+let dragActive = false; // кнопка мыши зажата над #menu
+let dragMoved = false;  // реально сдвинули (за порог) — отличаем от обычного клика по карточке
+let dragStartX = 0;
+let dragStartScrollLeft = 0;
+const DRAG_CLICK_THRESHOLD = 5; // px
+
+menuEl.addEventListener('mousedown', (e) => {
+  dragActive = true;
+  dragMoved = false;
+  dragStartX = e.pageX;
+  dragStartScrollLeft = menuEl.scrollLeft;
+});
+document.addEventListener('mousemove', (e) => {
+  if (!dragActive) return;
+  const dx = e.pageX - dragStartX;
+  if (!dragMoved && Math.abs(dx) > DRAG_CLICK_THRESHOLD) {
+    dragMoved = true;
+    menuEl.classList.add('dragging');
+  }
+  if (dragMoved) {
+    menuEl.scrollLeft = dragStartScrollLeft - dx;
+    e.preventDefault();
+  }
+});
+document.addEventListener('mouseup', () => {
+  dragActive = false;
+  menuEl.classList.remove('dragging');
+});
+// Если перетаскивание реально было — гасим клик по карточке в фазе перехвата: иначе после отпускания
+// кнопки мыши срабатывал бы click по тому, что оказалось под курсором, и открывалась не та история.
+menuEl.addEventListener('click', (e) => {
+  if (dragMoved) { e.preventDefault(); e.stopPropagation(); dragMoved = false; }
+}, true);
+
 async function renderCurrent() {
   isPaused = false; // новая сцена начинается не на паузе, даже если предыдущая была поставлена
   updatePauseBtn();
