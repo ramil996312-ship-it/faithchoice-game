@@ -1523,7 +1523,19 @@ function renderProfile() {
   const totalStories = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
   const inProgress = Math.max(0, getStarted().size - completed.size);
 
-  const rows = content().CHARACTERS
+  // Раздел называется "Пройденные И ТЕКУЩИЕ" (profileCompletedSection), но раньше сюда попадали
+  // только завершённые истории — незавершённые нигде не показывались, хотя CSS под них
+  // (.profile-dot.progress, .profile-item-status) уже был в разметке, просто не использовался.
+  // Текущие — сверху (то, что можно продолжить прямо сейчас, важнее хроники уже пройденного).
+  const started = getStarted();
+  const inProgressRows = content().CHARACTERS
+    .filter(c => content().STORIES[c.key] && started.has(c.key) && !completed.has(c.key))
+    .map(c => `<div class="profile-list-item">
+      <div class="profile-dot progress"></div>
+      <div class="profile-item-text"><div class="name">${c.name}</div><div class="meta">${c.theme.split(',')[0]}</div></div>
+      <span class="profile-item-status">${t('profileInProgressLabel')}</span>
+    </div>`).join('');
+  const completedRows = content().CHARACTERS
     .filter(c => content().STORIES[c.key] && completed.has(c.key))
     .sort((a, b) => (completedAt[b.key] || 0) - (completedAt[a.key] || 0))
     .map(c => {
@@ -1535,6 +1547,7 @@ function renderProfile() {
         <span class="profile-heart profile-heart-sm heart-${path}"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="${path === 'light' ? '#F2E8D6' : '#3B2A20'}" stroke="${path === 'light' ? '#C9A227' : '#8C6318'}" stroke-width="${path === 'light' ? '1' : '1.3'}"/></svg><span class="heart-text">${t(path)}</span></span>
       </div>`;
     }).join('');
+  const rows = inProgressRows + completedRows;
 
   const myPhoto = getProfilePhoto();
   profileScreenEl.innerHTML = `

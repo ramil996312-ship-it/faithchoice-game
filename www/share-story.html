@@ -74,9 +74,19 @@
   #micClearBtn:hover { border-color: var(--accent2); color: var(--accent2); }
   #micHint { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
 
-  .check-row { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 0.9rem; }
+  .check-row { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 0.9rem; padding: 0.3rem; border-radius: 6px; transition: outline-color 0.15s; }
   .check-row input { margin-top: 0.25rem; flex: none; }
   .check-row label { margin: 0; font-size: 0.85rem; color: var(--text-dim); }
+  /* Явная подсветка обязательного, но не отмеченного согласия — раньше о нём говорило только
+     стандартное браузерное всплывающее сообщение при попытке отправить (в разных браузерах/на
+     телефоне выглядит и ведёт себя по-разному, легко не заметить). */
+  .check-row.field-invalid { outline: 2px solid var(--accent2); background: color-mix(in srgb, var(--accent2) 10%, transparent); }
+  .check-row.field-invalid label { color: var(--accent2); }
+  .submit-confirm {
+    margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 8px; font-size: 0.88rem; line-height: 1.4;
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 1px solid var(--accent);
+    color: var(--text);
+  }
 
   .submit-btn {
     margin-top: 1.6rem; width: 100%; background: linear-gradient(180deg,
@@ -200,7 +210,8 @@
     </div>
     <p class="withdraw-note">Вы можете отозвать любое из этих согласий в любой момент до публикации — просто напишите на hello@faithchoice.net.</p>
 
-    <button type="submit" class="submit-btn">Отправить</button>
+    <button type="submit" class="submit-btn" id="submitBtn">Отправить</button>
+    <div id="submitConfirm" class="submit-confirm hidden"></div>
   </form>
 
   <a class="back" href="index.html">← Вернуться к историям</a>
@@ -368,6 +379,14 @@
     micClearBtn.classList.add('hidden');
   });
 
+  // Подсветка обязательного, но не отмеченного согласия — 'invalid' стреляет по каждому невалидному
+  // required-полю при попытке сабмита (браузер сам блокирует событие submit, пока форма невалидна),
+  // 'change' снимает подсветку сразу, как только человек отметил чекбокс.
+  document.querySelectorAll('.check-row input[required]').forEach(cb => {
+    cb.addEventListener('invalid', () => cb.closest('.check-row').classList.add('field-invalid'));
+    cb.addEventListener('change', () => cb.closest('.check-row').classList.remove('field-invalid'));
+  });
+
   document.getElementById('storyForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const nameMode = document.querySelector('input[name="nameMode"]:checked').value;
@@ -386,6 +405,19 @@
       '\n\nИстория:\n' + text;
     window.location.href = 'mailto:hello@faithchoice.net?subject=' + encodeURIComponent(subject) +
       '&body=' + encodeURIComponent(body);
+
+    // Реальной отправки на сервер здесь нет вообще — это mailto:-ссылка, открывающая почтовый
+    // клиент пользователя. Без этого сообщения после клика "Отправить" ничего видимо не происходит
+    // (особенно если на устройстве не настроен почтовый клиент — тогда переход тихо ничего не даёт).
+    // Спиннер здесь был бы враньём: реального ожидания сервера нет, поэтому вместо него — короткая
+    // блокировка кнопки от повторного клика и честное сообщение с планом Б (написать самим).
+    const submitBtn = document.getElementById('submitBtn');
+    const confirmEl = document.getElementById('submitConfirm');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Открываем почту…';
+    confirmEl.textContent = 'Спасибо! Сейчас должен открыться ваш почтовый клиент с готовым письмом — просто нажмите там «Отправить». Если ничего не открылось, напишите нам сами на hello@faithchoice.net — мы обязательно ответим.';
+    confirmEl.classList.remove('hidden');
+    setTimeout(() => { submitBtn.disabled = false; submitBtn.textContent = 'Отправить'; }, 3000);
   });
 </script>
 </body>
