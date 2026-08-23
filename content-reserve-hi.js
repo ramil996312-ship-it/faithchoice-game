@@ -3511,5 +3511,5 @@
 
   const data = { CHARACTERS, STORIES };
   if (typeof module !== 'undefined' && module.exports) module.exports = data;
-  else { window.Content = window.Content || {}; window.Content.reserve = data; }
+  else { window.Content = window.Content || {}; window.Content.reserveHi = data; }
 })();
