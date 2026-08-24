@@ -733,7 +733,6 @@ const donateBtnEl = document.getElementById('btnDonate');
 const donateModalEl = document.getElementById('donateModal');
 function initDonate() {
   if (!DONATE_BANNER_ENABLED) return;
-  donateBtnEl.classList.remove('hidden');
   document.getElementById('donateModalText').textContent = t('donateText');
   // Реквизиты для ручного банковского перевода — донат пока принимается только так, отдельного
   // платёжного сервиса нет, поэтому CTA-ссылка на DONATE_URL ('#') скрыта как нерабочая.
@@ -830,6 +829,9 @@ function enterApp() {
     profileScreenEl.appendChild(langSwitchEl);
     langSwitchEl.classList.remove('hidden');
   }
+  // Кнопка доната — постоянная, но только после входа: до этого момента она перекрывала кнопки
+  // экрана-приветствия на невысоких экранах (донат fixed-позиционирован в правом нижнем углу).
+  if (DONATE_BANNER_ENABLED && donateBtnEl) donateBtnEl.classList.remove('hidden');
   const sharedKey = getSharedStoryKey();
   if (sharedKey) startStory(sharedKey); else menuEl.classList.remove('hidden');
 }
