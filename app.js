@@ -1080,7 +1080,17 @@ function updateMenuProgress(completed) {
   const total = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
   const done = content().CHARACTERS.filter(c => content().STORIES[c.key] && completed.has(c.key)).length;
   if (total === 0) { menuProgressEl.classList.add('hidden'); return; }
-  menuProgressEl.textContent = t('collectionProgress').replace('{done}', done).replace('{total}', total);
+  // Строка вида "Пройдено {done} из {total} · ~3 мин на историю" — во всех 5 языках устойчиво
+  // разделена на " · " (счёт / метаинформация), это позволяет визуально выделить только числа,
+  // не трогая сам переведённый текст. Числа — единственные цифры в этой части строки на любом языке.
+  const full = t('collectionProgress').replace('{done}', done).replace('{total}', total);
+  const [mainText, metaText] = full.split(' · ');
+  const mainHtml = mainText.replace(/\d+/g, (n) => `<span class="cp-num">${n}</span>`);
+  const isComplete = done === total;
+  menuProgressEl.classList.toggle('cp-complete', isComplete);
+  menuProgressEl.innerHTML = `
+    <div class="cp-text">${isComplete ? '<span class="cp-star">✦</span> ' : ''}${mainHtml}${metaText ? ` <span class="cp-meta">· ${metaText}</span>` : ''}</div>
+    <div class="cp-track"><div class="cp-fill" style="width:${Math.round(done / total * 100)}%"></div></div>`;
   menuProgressEl.classList.remove('hidden');
 }
 
@@ -1577,7 +1587,7 @@ function renderProfile() {
     </div>
     <div>
       <div class="profile-section-title">${t('profileCompletedSection')}</div>
-      ${rows || `<div class="profile-empty">${t('profileEmpty')}</div>`}
+      ${rows ? `<div class="profile-list">${rows}</div>` : `<div class="profile-empty">${t('profileEmpty')}</div>`}
     </div>
     <button type="button" class="profile-cta" id="profileListenAllBtn">${t('profileListenAll')}</button>
     <button type="button" class="profile-cta" id="profileShareBtn">${t('profileShare')}</button>
