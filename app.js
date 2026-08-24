@@ -248,11 +248,21 @@ function pickReminderStory() {
   const data = content();
   const completed = getCompleted();
   const endings = getCompletedEndings();
-  for (const c of data.CHARACTERS) {
-    if (data.STORIES[c.key] && !completed.has(c.key)) return c.key;
+  const chars = data.CHARACTERS.filter(c => data.STORIES[c.key]);
+  for (const c of chars) {
+    if (!completed.has(c.key)) return c.key;
   }
-  for (const c of data.CHARACTERS) {
-    if (data.STORIES[c.key] && (endings[c.key] || []).length < 2) return c.key;
+  // Все истории пройдены хотя бы раз — предлагаем ту, где видели только одну из двух концовок,
+  // начиная со СЛЕДУЮЩЕЙ после только что пройденной (round-robin), а не всегда с первой по списку.
+  // Без этого сразу после прохождения истории она же тут же предлагалась бы снова (первый персонаж
+  // в CHARACTERS почти всегда попадал бы под условие "< 2 концовок" сразу после своего прохождения).
+  const completedAt = getCompletedAt();
+  const lastKey = Object.entries(completedAt).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const lastIdx = lastKey ? chars.findIndex(c => c.key === lastKey) : -1;
+  const startIdx = lastIdx >= 0 ? (lastIdx + 1) % chars.length : 0;
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[(startIdx + i) % chars.length];
+    if ((endings[c.key] || []).length < 2) return c.key;
   }
   return null;
 }
