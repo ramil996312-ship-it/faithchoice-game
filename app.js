@@ -1038,6 +1038,26 @@ function renderCatChips() {
   });
 }
 
+// Обложка карточки истории по совету дизайнера — один путь взгляда: фото, имя, мягкая тема, статус
+// (текстом, не только цветной галочкой — иначе недоступно тем, кто не различает цвет), действие.
+// Общий шаблон для двух горизонтальных рядов карточек в приложении — списка историй (#menu) и
+// "Пройденные и текущие" в профиле (см. renderProfile) — те же .card/.card-photo/.card-icon,
+// чтобы не дублировать разметку под каждый новый ряд отдельно.
+function storyCardHtml(c, { done, statusText, extraClass = '' }) {
+  const icon = c.icon || DEFAULT_ICON;
+  const badge = done ? `<span class="icon-badge" title="${t('storyDone')}">✓</span>` : '';
+  const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
+  return `<button class="card${done ? ' card-done' : ''}${extraClass}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
+     <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'"></div>
+     <div class="card-text">
+       <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
+       <div class="card-theme">${c.softTheme || c.theme}</div>
+       ${statusText ? `<div class="card-status">${statusText}</div>` : ''}
+     </div>
+     <div class="card-icon">${icon}${badge}</div>
+   </button>`;
+}
+
 function renderMenu() {
   const completed = getCompleted();
   const started = getStarted();
@@ -1048,24 +1068,10 @@ function renderMenu() {
   renderCatChips();
   const chars = content().CHARACTERS.filter(c => activeCategory === 'all' || CATEGORY_BY_KEY[c.key] === activeCategory);
   menuEl.innerHTML = chars.map(c => {
-    const icon = c.icon || DEFAULT_ICON;
     const available = !!content().STORIES[c.key];
     const done = completed.has(c.key);
-    const badge = done ? `<span class="icon-badge" title="${t('storyDone')}">✓</span>` : '';
-    // Обложка карточки по совету дизайнера — один путь взгляда: фото, имя, мягкая тема, статус
-    // (текстом, не только цветной галочкой — иначе недоступно тем, кто не различает цвет), действие.
-    // Категория с обложки убрана (она уже есть в чипах-фильтрах сверху), символ пола — второстепенный.
     const statusText = done ? t('storyDone') : started.has(c.key) ? t('profileInProgressLabel') : '';
-    const atmoBg = `radial-gradient(circle at 30% 25%, color-mix(in srgb, ${colorForTheme(c.color)} 55%, white 15%), transparent 60%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${colorForTheme(c.color)} 70%, black 10%), transparent 65%), var(--track-bg)`;
-    return `<button class="card${available ? '' : ' card-soon'}${done ? ' card-done' : ''}" data-key="${c.key}" style="--accent:${colorForTheme(c.color)}">
-       <div class="card-photo" style="background:${atmoBg}"><img src="photos/${c.key}.jpg" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'"></div>
-       <div class="card-text">
-         <div class="card-name"><span class="gender-symbol">${c.gender === 'ж' ? '♀' : '♂'}</span> ${c.name}</div>
-         <div class="card-theme">${c.softTheme || c.theme}</div>
-         ${statusText ? `<div class="card-status">${statusText}</div>` : ''}
-       </div>
-       <div class="card-icon">${icon}${badge}</div>
-     </button>`;
+    return storyCardHtml(c, { done, statusText, extraClass: available ? '' : ' card-soon' });
   }).join('');
   menuEl.querySelectorAll('.card').forEach(btn => {
     btn.addEventListener('click', () => startStory(btn.dataset.key));
@@ -1247,59 +1253,69 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === '2' && buttons[1]) buttons[1].click();
 });
 
-// Список историй теперь горизонтальный (#menu) — на телефоне это работает само (тач-свайп), но
-// обычное колесо мыши на компьютере крутит только вертикально и по горизонтальному ряду ничего не
-// двигает. Переводим вертикальный скролл в горизонтальный, пока курсор над списком. deltaX у
-// трекпада/наклонного колеса уже даёт настоящий горизонтальный жест — тогда просто не мешаем ему.
-menuEl.addEventListener('wheel', (e) => {
-  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-  menuEl.scrollLeft += e.deltaY;
-  e.preventDefault();
-}, { passive: false });
-
-// "Захват и тащи" мышью — тач-свайп по природе тащит контент под пальцем, а обычная мышь такого
-// нативно не умеет (перетаскивание кликом по умолчанию просто выделяет текст). mousemove/mouseup
-// повешены на document, а не на menuEl — иначе быстрый рывок мышью за пределы списка обрывал бы
-// перетаскивание на границе элемента.
-let dragActive = false; // кнопка мыши зажата над #menu
-let dragMoved = false;  // реально сдвинули (за порог) — отличаем от обычного клика по карточке
+// Горизонтальные ряды карточек (#menu, и с 2026-08-26 — список "Пройденные и текущие" в профиле)
+// на телефоне листаются сами (тач-свайп), но для мыши на десктопе нужны все три обработчика:
+// колесо (обычное вертикальное колесо ничего не двигает в horizontal-ряду), захват-и-тащи (мышь,
+// в отличие от пальца, не тащит контент по умолчанию) и запрет нативного drag у <img>. См. skill
+// faithchoice-deploy → Known gotchas: без любого из трёх ряд не листается мышью на десктопе.
+//
+// dragActive/dragMoved/dragEl — общее состояние на ВСЕ ряды сразу (не по одному на ряд): drag может
+// идти только над одним рядом одновременно (одна мышь), а mousemove/mouseup обязаны висеть на
+// document (см. ниже) РОВНО ОДИН РАЗ за всю жизнь страницы — если бы setupCardRowDrag добавлял их
+// заново при каждом пересоздании ряда (список профиля пересоздаётся при каждом renderProfile()),
+// они бы копились на document бесконечно. Поэтому document-уровневые слушатели вынесены наружу
+// функции и не зависят от того, для какого элемента она вызвана.
+let dragActive = false;
+let dragMoved = false;
 let dragStartX = 0;
 let dragStartScrollLeft = 0;
+let dragEl = null;
 const DRAG_CLICK_THRESHOLD = 5; // px
-
-// У <img> в браузере по умолчанию включено нативное HTML5-перетаскивание (то, что позволяет
-// вытащить картинку из страницы) — оно перехватывает жест раньше mousemove ниже и полностью глушит
-// наш драг именно тогда, когда хватаешь за фото карточки (draggable="false" на самом <img> в
-// разметке уже стоит, это доп. страховка на случай других перетаскиваемых элементов внутри карточки).
-menuEl.addEventListener('dragstart', (e) => e.preventDefault());
-
-menuEl.addEventListener('mousedown', (e) => {
-  dragActive = true;
-  dragMoved = false;
-  dragStartX = e.pageX;
-  dragStartScrollLeft = menuEl.scrollLeft;
-});
 document.addEventListener('mousemove', (e) => {
-  if (!dragActive) return;
+  if (!dragActive || !dragEl) return;
   const dx = e.pageX - dragStartX;
   if (!dragMoved && Math.abs(dx) > DRAG_CLICK_THRESHOLD) {
     dragMoved = true;
-    menuEl.classList.add('dragging');
+    dragEl.classList.add('dragging');
   }
   if (dragMoved) {
-    menuEl.scrollLeft = dragStartScrollLeft - dx;
+    dragEl.scrollLeft = dragStartScrollLeft - dx;
     e.preventDefault();
   }
 });
 document.addEventListener('mouseup', () => {
   dragActive = false;
-  menuEl.classList.remove('dragging');
+  if (dragEl) dragEl.classList.remove('dragging');
 });
-// Если перетаскивание реально было — гасим клик по карточке в фазе перехвата: иначе после отпускания
-// кнопки мыши срабатывал бы click по тому, что оказалось под курсором, и открывалась не та история.
-menuEl.addEventListener('click', (e) => {
-  if (dragMoved) { e.preventDefault(); e.stopPropagation(); dragMoved = false; }
-}, true);
+
+// Слушатели ниже — element-scoped (на el, не на document), безопасно вызывать заново на каждом
+// свежепересозданном элементе (innerHTML полностью уничтожает старый узел вместе со старыми
+// слушателями — задваивания не будет), в отличие от document-уровневых выше.
+function setupCardRowDrag(el) {
+  if (!el) return;
+  el.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // трекпад уже даёт горизонтальный жест
+    el.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+  // У <img> в браузере по умолчанию включено нативное HTML5-перетаскивание — оно перехватывает жест
+  // раньше mousemove ниже и глушит драг именно при захвате за фото карточки (draggable="false" на
+  // самом <img> в разметке уже стоит, это доп. страховка на случай других элементов внутри карточки).
+  el.addEventListener('dragstart', (e) => e.preventDefault());
+  el.addEventListener('mousedown', (e) => {
+    dragActive = true;
+    dragMoved = false;
+    dragStartX = e.pageX;
+    dragStartScrollLeft = el.scrollLeft;
+    dragEl = el;
+  });
+  // Если перетаскивание реально было — гасим клик по карточке в фазе перехвата: иначе после
+  // отпускания кнопки мыши срабатывал бы click по тому, что оказалось под курсором.
+  el.addEventListener('click', (e) => {
+    if (dragMoved) { e.preventDefault(); e.stopPropagation(); dragMoved = false; }
+  }, true);
+}
+setupCardRowDrag(menuEl);
 
 async function renderCurrent() {
   isPaused = false; // новая сцена начинается не на паузе, даже если предыдущая была поставлена
@@ -1546,30 +1562,25 @@ function renderProfile() {
   const inProgress = Math.max(0, getStarted().size - completed.size);
 
   // Раздел называется "Пройденные И ТЕКУЩИЕ" (profileCompletedSection), но раньше сюда попадали
-  // только завершённые истории — незавершённые нигде не показывались, хотя CSS под них
-  // (.profile-dot.progress, .profile-item-status) уже был в разметке, просто не использовался.
-  // Текущие — сверху (то, что можно продолжить прямо сейчас, важнее хроники уже пройденного).
+  // только завершённые истории — незавершённые нигде не показывались. Текущие — первыми (то, что
+  // можно продолжить прямо сейчас, важнее хроники уже пройденного). С 2026-08-26 — горизонтальный
+  // ряд карточек (storyCardHtml, тот же вид, что и в #menu), а не вертикальный список строк: по
+  // прямой просьбе пользователя ("как на главной"), после того как более ранний вариант — просто
+  // вертикальный скролл фиксированной высоты — не устроил. Клик по карточке ведёт в саму историю
+  // (startStory), как и на главном экране — раньше строки списка были некликабельными.
   const started = getStarted();
-  const inProgressRows = content().CHARACTERS
+  const inProgressCards = content().CHARACTERS
     .filter(c => content().STORIES[c.key] && started.has(c.key) && !completed.has(c.key))
-    .map(c => `<div class="profile-list-item">
-      <div class="profile-dot progress"></div>
-      <div class="profile-item-text"><div class="name">${c.name}</div><div class="meta">${c.theme.split(',')[0]}</div></div>
-      <span class="profile-item-status">${t('profileInProgressLabel')}</span>
-    </div>`).join('');
-  const completedRows = content().CHARACTERS
+    .map(c => storyCardHtml(c, { done: false, statusText: t('profileInProgressLabel') })).join('');
+  const completedCards = content().CHARACTERS
     .filter(c => content().STORIES[c.key] && completed.has(c.key))
     .sort((a, b) => (completedAt[b.key] || 0) - (completedAt[a.key] || 0))
     .map(c => {
       const path = (endings[c.key] || []).includes('dark') && !(endings[c.key] || []).includes('light') ? 'dark' : 'light';
       const dateStr = completedAt[c.key] ? formatDate(completedAt[c.key]) : '';
-      return `<div class="profile-list-item">
-        <div class="profile-dot ${path}"></div>
-        <div class="profile-item-text"><div class="name">${c.name}</div><div class="meta">${c.theme.split(',')[0]}${dateStr ? ' · ' + dateStr : ''}</div></div>
-        <span class="profile-heart profile-heart-sm heart-${path}"><svg class="heart-bg" viewBox="0 0 24 23" aria-hidden="true"><path d="M12,21.5 C6,15.5 2,11 2,7 C2,3.5 4.7,1.5 7.7,1.5 C9.8,1.5 11.3,2.6 12,4.4 C12.7,2.6 14.2,1.5 16.3,1.5 C19.3,1.5 22,3.5 22,7 C22,11 18,15.5 12,21.5 Z" fill="${path === 'light' ? '#F2E8D6' : '#3B2A20'}" stroke="${path === 'light' ? '#C9A227' : '#8C6318'}" stroke-width="${path === 'light' ? '1' : '1.3'}"/></svg><span class="heart-text">${t(path)}</span></span>
-      </div>`;
+      return storyCardHtml(c, { done: true, statusText: t(path) + (dateStr ? ' · ' + dateStr : '') });
     }).join('');
-  const rows = inProgressRows + completedRows;
+  const cards = inProgressCards + completedCards;
 
   const myPhoto = getProfilePhoto();
   profileScreenEl.innerHTML = `
@@ -1587,7 +1598,7 @@ function renderProfile() {
     </div>
     <div>
       <div class="profile-section-title">${t('profileCompletedSection')}</div>
-      ${rows ? `<div class="profile-list">${rows}</div>` : `<div class="profile-empty">${t('profileEmpty')}</div>`}
+      ${cards ? `<div class="card-row" id="profileCardRow">${cards}</div>` : `<div class="profile-empty">${t('profileEmpty')}</div>`}
     </div>
     <button type="button" class="profile-cta" id="profileListenAllBtn">${t('profileListenAll')}</button>
     <button type="button" class="profile-cta" id="profileShareBtn">${t('profileShare')}</button>
@@ -1597,6 +1608,13 @@ function renderProfile() {
     </div>
   `;
   document.getElementById('profileGreetingText').textContent = getProfileName() ? t('profileGreeting').replace('{name}', getProfileName()) : t('profileTitle');
+  const profileCardRowEl = document.getElementById('profileCardRow');
+  if (profileCardRowEl) {
+    setupCardRowDrag(profileCardRowEl);
+    profileCardRowEl.querySelectorAll('.card').forEach(btn => {
+      btn.addEventListener('click', () => startStory(btn.dataset.key));
+    });
+  }
   const shareBtn = document.getElementById('profileShareBtn');
   if (shareBtn) shareBtn.addEventListener('click', () => { window.location.href = 'share-story.html'; });
   const listenAllBtn = document.getElementById('profileListenAllBtn');

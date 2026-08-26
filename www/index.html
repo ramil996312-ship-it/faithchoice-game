@@ -190,19 +190,22 @@
   }
   #btnOfflineDownload:hover { color: var(--accent); opacity: 1; }
 
-  /* Список историй — горизонтальная прокрутка вместо вертикального стека (по просьбе
-     пользователя: 50 полноширинных карточек занимали слишком много места). Тот же паттерн
-     скрытого скроллбара, что уже был у #catChips. */
-  #menu {
+  /* Горизонтальная прокрутка карточками — общий паттерн для списка историй (#menu) и списка
+     "Пройденные и текущие" в профиле (#profileCardRow), вместо вертикального стека (по просьбе
+     пользователя: полноширинные карточки/строки занимали слишком много места). Тот же скрытый
+     скроллбар, что уже был у #catChips. Класс .card-row даёт и сам скролл-контейнер, и переопределяет
+     карточку внутри под горизонтальный ряд (см. ниже) — используется на любом таком ряду, не только
+     на #menu, чтобы не дублировать эти же правила под каждый новый ряд отдельно. */
+  .card-row {
     display: flex; gap: 0.75rem; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
     scroll-snap-type: x proximity; scrollbar-width: none; padding-bottom: 0.15rem;
     cursor: grab;
   }
-  #menu::-webkit-scrollbar { display: none; }
+  .card-row::-webkit-scrollbar { display: none; }
   /* Захват-и-тащи мышью (app.js) — во время перетаскивания курсор меняется на "grabbing" и snap
      временно отключается (иначе прерывистые снап-точки дёргали бы scrollLeft прямо под курсором). */
-  #menu.dragging { cursor: grabbing; scroll-snap-type: none; }
-  #menu .card { user-select: none; } /* иначе перетаскивание мышью выделяло бы текст карточки */
+  .card-row.dragging { cursor: grabbing; scroll-snap-type: none; }
+  .card-row .card { user-select: none; } /* иначе перетаскивание мышью выделяло бы текст карточки */
   /* Карточка истории оформлена как обложка маленькой книги — тот же принцип, что и раньше (левая
      цветная полоса + тень), просто усилен: полоса-"корешок" толще, рядом с ней тонкая линия-биговка
      (как сгиб между корешком и обложкой), справа внутренняя тень имитирует торец страниц. Сами цвета
@@ -274,29 +277,29 @@
   /* Фото крупнее, чем на карточках списка ниже (после горизонтального редизайна их постер-фото
      стало 7rem — без увеличения "Продолжить" перестала бы читаться как самая заметная карточка). */
   #continueCard .card-photo { width: 5.4rem; height: 5.4rem; border-radius: 10px; }
-  /* Карточки в горизонтальном ряду (#menu) — фото на всю ширину сверху, а не квадрат слева, и
-     эмблема (.card-icon) над ним плашкой в углу вместо места в общем ряду — в узкой карточке
-     ряду "фото-текст-иконка" просто не хватило бы горизонтального места. */
-  #menu .card-photo { width: 100%; height: 7rem; border-radius: 0; border: none; }
-  #menu .card-icon {
+  /* Карточки в горизонтальном ряду (.card-row: #menu и #profileCardRow) — фото на всю ширину сверху,
+     а не квадрат слева, и эмблема (.card-icon) над ним плашкой в углу вместо места в общем ряду —
+     в узкой карточке ряду "фото-текст-иконка" просто не хватило бы горизонтального места. */
+  .card-row .card-photo { width: 100%; height: 7rem; border-radius: 0; border: none; }
+  .card-row .card-icon {
     position: absolute; top: 0.5rem; right: 0.5rem; margin-left: 0; align-self: auto;
     width: 1.7rem; height: 1.7rem;
   }
-  #menu .card-text { padding: 0.6rem 0.7rem 0.7rem; }
+  .card-row .card-text { padding: 0.6rem 0.7rem 0.7rem; }
   .monogram {
     width: 100%; height: 100%; border-radius: 50%; border: 1.5px solid var(--accent);
     display: flex; align-items: center; justify-content: center; font-size: 1.15rem; color: var(--accent);
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%);
   }
   .card-name { font-size: 1.3rem; color: var(--accent); }
-  #menu .card-name { font-size: 1.05rem; }
+  .card-row .card-name { font-size: 1.05rem; }
   /* Символ пола — по совету дизайнера, второстепенный: раньше был крупнее самого имени (2em) и
      конкурировал с ним, теперь мельче и приглушённого цвета, просто пометка, не акцент. */
   .gender-symbol { font-size: 0.7em; vertical-align: middle; line-height: 1; display: inline-block; color: var(--text-dim); }
   .card-theme { font-size: 1rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.35; }
   /* line-clamp — в узкой карточке разная длина softTheme/theme иначе давала бы карточкам разную
      высоту вразнобой; 3 строки хватает почти всем формулировкам с запасом. */
-  #menu .card-theme {
+  .card-row .card-theme {
     font-size: 0.82rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -883,38 +886,12 @@
     font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim);
     margin: 0 0 0.4rem; padding-top: 0.9rem; border-top: 1px solid var(--border);
   }
-  .profile-bar-labels { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
-  .profile-heart { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 3.4rem; height: 3.2rem; flex-shrink: 0; }
-  .profile-heart .heart-text { font-size: 0.78rem; }
-  /* Список пройденных/текущих историй — раньше рос без ограничения (на полной коллекции из 50
-     страница превращалась в длинную простыню, карточка профиля сверху "терялась"). Теперь это
-     внутренний скролл фиксированной высоты (~4 строки видно сразу), с затуханием по нижнему краю —
-     подсказка "тут можно прокрутить", а не обрыв списка ровной линией. */
-  .profile-list {
-    max-height: 19rem; overflow-y: auto;
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4rem), transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.4rem), transparent 100%);
-    scrollbar-width: thin; scrollbar-color: var(--icon-gold) transparent;
-  }
-  .profile-list::-webkit-scrollbar { width: 5px; }
-  .profile-list::-webkit-scrollbar-track { background: transparent; }
-  .profile-list::-webkit-scrollbar-thumb { background: var(--icon-gold); border-radius: 3px; }
-  .profile-list-item {
-    display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.2rem 0.7rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .profile-list-item:last-child { border-bottom: none; }
-  .profile-dot { width: 4px; border-radius: 2px; align-self: stretch; flex: none; }
-  .profile-dot.light { background: #34c9a3; }
-  .profile-dot.dark { background: #6B2737; }
-  .profile-dot.progress { background: var(--text-soft); opacity: 0.5; }
-  .profile-item-text { flex: 1; min-width: 0; }
-  .profile-item-text .name { font-size: 1rem; color: var(--text); font-weight: bold; }
-  .profile-item-text .meta { font-size: 0.78rem; color: var(--text-dim); }
-  .profile-item-status { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-soft); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; }
-  .profile-item-status .mini-heart { width: 0.85rem; height: 0.8rem; flex-shrink: 0; }
-  .profile-heart-sm { width: 3rem; height: 2.8rem; flex-shrink: 0; }
-  .profile-heart-sm .heart-text { font-size: 0.72rem; }
+  /* Список "Пройденные и текущие" в профиле — горизонтальный ряд карточек (тот же .card-row/.card,
+     что и список историй #menu на главном экране, см. выше), а не вертикальный список строк:
+     по прямой просьбе пользователя ("как на главной", после того как более ранний вариант —
+     вертикальный скролл фиксированной высоты — не устроил). Никакого отдельного CSS новым
+     карточкам не нужно — переиспользуют .card/.card-photo/.card-icon/.icon-badge/.card-status
+     целиком, тот же визуальный язык, что и в основном списке. */
   .profile-empty { color: var(--text-dim); font-size: 0.9rem; text-align: center; padding: 1rem 0; }
   .profile-cta {
     background: var(--surface); border: 1px solid var(--icon-gold); color: var(--icon-gold);
@@ -948,7 +925,7 @@
     <div id="menuProgress" class="hidden"></div>
     <div id="continueCard" class="hidden"></div>
     <div id="catChips" class="hidden"></div>
-    <div id="menu" class="hidden"></div>
+    <div id="menu" class="hidden card-row"></div>
     <div id="reminderRow" class="hidden">
       <label for="reminderTimeInput" id="reminderLabel"></label>
       <input type="time" id="reminderTimeInput">
