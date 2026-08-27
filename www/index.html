@@ -92,38 +92,56 @@
   /* padding-right компенсирует #btnTheme (position: fixed, справа) — без него центрированный
      заголовок на узких телефонных экранах наезжает правым краем текста прямо на кнопку темы. */
   h1 { font-size: 1.7rem; font-weight: bold; text-align: center; color: var(--icon-gold); margin-top: 0; margin-bottom: 0.75rem; letter-spacing: 0.01em; padding-right: 3.4rem; }
+  /* Буквы заголовка "загораются" по очереди волной слева направо при открытии/смене языка (см.
+     setIgniteTitle() в app.js — каждая буква в своём <span style="--i:N">). both — держит
+     стартовое "незажжённое" состояние до своей задержки и конечное "горит ровно" после, поэтому
+     буквы справа не мигают все разом, пока волна до них не дошла. */
+  .ignite-letter {
+    display: inline-block; animation: letterIgnite 0.7s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.055s);
+  }
+  @keyframes letterIgnite {
+    0% { color: color-mix(in srgb, var(--icon-gold) 35%, #2a1a08 65%); text-shadow: none; }
+    40% { color: #fff8e0; text-shadow: 0 0 6px #fff2c4, 0 0 14px var(--icon-gold), 0 0 24px #e8791f; }
+    100% { color: var(--icon-gold); text-shadow: 0 0 5px color-mix(in srgb, var(--icon-gold) 50%, transparent); }
+  }
   .hidden { display: none !important; }
 
   /* Языки пламени под заголовком — по просьбе пользователя, огонь "проступает" из-под слов
-     "Истории Веры". padding-right тот же, что у h1 (компенсация #btnTheme), иначе ряд пламени
+     "Истории Веры". padding-right тот же, что у h1 (компенсация #btnTheme), иначе кластер
      не совпадёт по центру с визуально смещённым текстом заголовка. Тянем вверх margin-top
      отрицательным значением, чтобы кончики языков касались низа букв, а не висели отдельной
-     строкой. filter:blur даёт мягкое сияние вместо резких контуров "нарисованного" огня. */
+     строкой. filter:blur даёт мягкое сияние вместо резких контуров "нарисованного" огня.
+     ВАЖНО: первая версия (ровный рядок одинаковых язычков с равным gap) выглядела как кольцо
+     газовой конфорки — по отзыву пользователя переделано на нахлёстывающийся неровный кластер:
+     отрицательный margin-left вместо gap сталкивает языки друг на друга, у каждого свой
+     статичный поворот (rotate) и свой сдвиг по вертикали (translateY), поверх ещё играет
+     анимация мерцания — вместе это читается как один костерок, а не строй одинаковых огоньков. */
   .title-flame {
     position: relative; width: 100%; box-sizing: border-box; padding-right: 3.4rem;
-    height: 1.5rem; margin: -1.35rem auto 0.5rem;
-    display: flex; justify-content: center; align-items: flex-end; gap: 0.1rem;
+    height: 1.6rem; margin: -1.3rem auto 0.5rem;
+    display: flex; justify-content: center; align-items: flex-end;
     pointer-events: none; filter: blur(0.5px); z-index: -1;
   }
   .title-flame::before {
     content: ''; position: absolute; left: 50%; bottom: -0.2rem; transform: translateX(-50%);
-    width: 55%; height: 170%;
-    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--icon-gold) 40%, transparent) 0%, transparent 70%);
+    width: 50%; height: 170%;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--icon-gold) 35%, transparent) 0%, transparent 70%);
     filter: blur(7px); z-index: -1;
   }
   /* Заострённый кончик языка пламени вместо капли — clip-path вырезает неровный ромб,
      сужающийся кверху, а не ровный овал; так силуэт читается как огонь, а не бусины. */
   .title-flame .flame {
-    width: 0.8rem; height: 1.3rem; transform-origin: bottom center;
+    width: 0.75rem; height: 1.2rem; transform-origin: 50% 90%;
     clip-path: polygon(50% 0%, 78% 22%, 96% 58%, 74% 100%, 26% 100%, 4% 58%, 22% 22%);
     background: radial-gradient(circle at 50% 85%, #fff6d8 0%, var(--icon-gold) 32%, #d9660f 62%, #8a2f10 88%);
-    opacity: 0.9; animation: flameFlicker 1.5s ease-in-out infinite;
+    opacity: 0.88; animation: flameFlicker 1.5s ease-in-out infinite;
   }
-  .title-flame .flame:nth-child(1) { height: 0.9rem; animation-delay: -0.3s; animation-duration: 1.3s; }
-  .title-flame .flame:nth-child(2) { height: 1.4rem; animation-delay: -0.9s; animation-duration: 1.7s; }
-  .title-flame .flame:nth-child(3) { height: 1.65rem; width: 1rem; animation-delay: -0.1s; animation-duration: 1.5s; }
-  .title-flame .flame:nth-child(4) { height: 1.25rem; animation-delay: -1.2s; animation-duration: 1.8s; }
-  .title-flame .flame:nth-child(5) { height: 0.85rem; animation-delay: -0.5s; animation-duration: 1.4s; }
+  .title-flame .flame:nth-child(1) { height: 0.85rem; margin: 0 -0.3rem 0.15rem 0; rotate: -12deg; animation-delay: -0.3s; animation-duration: 1.3s; }
+  .title-flame .flame:nth-child(2) { height: 1.3rem; margin: 0 -0.32rem 0.05rem 0; rotate: 6deg; animation-delay: -0.9s; animation-duration: 1.7s; }
+  .title-flame .flame:nth-child(3) { height: 1.7rem; width: 1.05rem; margin: 0 -0.3rem 0 0; rotate: -3deg; animation-delay: -0.1s; animation-duration: 1.5s; }
+  .title-flame .flame:nth-child(4) { height: 1.15rem; margin: 0 -0.3rem 0.1rem 0; rotate: -7deg; animation-delay: -1.2s; animation-duration: 1.8s; }
+  .title-flame .flame:nth-child(5) { height: 0.8rem; rotate: 10deg; animation-delay: -0.5s; animation-duration: 1.4s; }
   @keyframes flameFlicker {
     0%, 100% { transform: scaleY(1) scaleX(1) skewX(0deg); opacity: 0.85; }
     25% { transform: scaleY(1.15) scaleX(0.88) skewX(-5deg); opacity: 1; }

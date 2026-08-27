@@ -776,8 +776,27 @@ function showChoiceArrow(direction) {
   faithArrowEl.classList.add(direction === 'dark' ? 'to-dark' : 'to-light');
 }
 
+// Буквы заголовка загораются по очереди волной слева направо (по просьбе пользователя — не
+// декоративные язычки под текстом отдельно, а сами буквы "вспыхивают"). textContent пришлось бы
+// одной строкой без анимации per-letter — оборачиваем каждый символ в свой <span> с индексом в
+// --i, CSS-задержка анимации = --i * шаг. Перевызывается при каждой смене языка (applyStaticText
+// вызывается из setLang()), поэтому заголовок "переигрывает" загорание и на новом языке — этого
+// не избежать без отдельного кода на "уже игралось", но выглядит уместно, а не как баг.
+function setIgniteTitle(text) {
+  h1El.textContent = '';
+  const frag = document.createDocumentFragment();
+  [...text].forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'ignite-letter';
+    span.style.setProperty('--i', i);
+    span.textContent = ch === ' ' ? ' ' : ch; // inline-block схлопывает обычный пробел в 0 (см. коммит)
+    frag.appendChild(span);
+  });
+  h1El.appendChild(frag);
+}
+
 function applyStaticText() {
-  h1El.textContent = t('title');
+  setIgniteTitle(t('title'));
   faithLabelsEl.querySelector('.heart-dark .heart-text').textContent = t('dark');
   faithLabelsEl.querySelector('.heart-light .heart-text').textContent = t('light');
   fitHeartLabels();
