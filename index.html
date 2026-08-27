@@ -94,6 +94,43 @@
   h1 { font-size: 1.7rem; font-weight: bold; text-align: center; color: var(--icon-gold); margin-top: 0; margin-bottom: 0.75rem; letter-spacing: 0.01em; padding-right: 3.4rem; }
   .hidden { display: none !important; }
 
+  /* Языки пламени под заголовком — по просьбе пользователя, огонь "проступает" из-под слов
+     "Истории Веры". padding-right тот же, что у h1 (компенсация #btnTheme), иначе ряд пламени
+     не совпадёт по центру с визуально смещённым текстом заголовка. Тянем вверх margin-top
+     отрицательным значением, чтобы кончики языков касались низа букв, а не висели отдельной
+     строкой. filter:blur даёт мягкое сияние вместо резких контуров "нарисованного" огня. */
+  .title-flame {
+    position: relative; width: 100%; box-sizing: border-box; padding-right: 3.4rem;
+    height: 1.5rem; margin: -1.35rem auto 0.5rem;
+    display: flex; justify-content: center; align-items: flex-end; gap: 0.1rem;
+    pointer-events: none; filter: blur(0.5px); z-index: -1;
+  }
+  .title-flame::before {
+    content: ''; position: absolute; left: 50%; bottom: -0.2rem; transform: translateX(-50%);
+    width: 55%; height: 170%;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--icon-gold) 40%, transparent) 0%, transparent 70%);
+    filter: blur(7px); z-index: -1;
+  }
+  /* Заострённый кончик языка пламени вместо капли — clip-path вырезает неровный ромб,
+     сужающийся кверху, а не ровный овал; так силуэт читается как огонь, а не бусины. */
+  .title-flame .flame {
+    width: 0.8rem; height: 1.3rem; transform-origin: bottom center;
+    clip-path: polygon(50% 0%, 78% 22%, 96% 58%, 74% 100%, 26% 100%, 4% 58%, 22% 22%);
+    background: radial-gradient(circle at 50% 85%, #fff6d8 0%, var(--icon-gold) 32%, #d9660f 62%, #8a2f10 88%);
+    opacity: 0.9; animation: flameFlicker 1.5s ease-in-out infinite;
+  }
+  .title-flame .flame:nth-child(1) { height: 0.9rem; animation-delay: -0.3s; animation-duration: 1.3s; }
+  .title-flame .flame:nth-child(2) { height: 1.4rem; animation-delay: -0.9s; animation-duration: 1.7s; }
+  .title-flame .flame:nth-child(3) { height: 1.65rem; width: 1rem; animation-delay: -0.1s; animation-duration: 1.5s; }
+  .title-flame .flame:nth-child(4) { height: 1.25rem; animation-delay: -1.2s; animation-duration: 1.8s; }
+  .title-flame .flame:nth-child(5) { height: 0.85rem; animation-delay: -0.5s; animation-duration: 1.4s; }
+  @keyframes flameFlicker {
+    0%, 100% { transform: scaleY(1) scaleX(1) skewX(0deg); opacity: 0.85; }
+    25% { transform: scaleY(1.15) scaleX(0.88) skewX(-5deg); opacity: 1; }
+    50% { transform: scaleY(0.88) scaleX(1.08) skewX(4deg); opacity: 0.9; }
+    75% { transform: scaleY(1.12) scaleX(0.92) skewX(-3deg); opacity: 0.97; }
+  }
+
   #ageGate {
     background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
     border-radius: 8px; padding: 1.25rem 1.4rem; box-shadow: var(--shadow-sm);
@@ -916,6 +953,9 @@
 <button id="btnTheme" title="Светлая/тёмная тема"></button>
 <main>
   <h1 id="pageTitle">Истории Веры</h1>
+  <div class="title-flame" aria-hidden="true">
+    <span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span>
+  </div>
   <div id="langSwitch"></div>
   <div id="basedOnBadge"></div>
 
