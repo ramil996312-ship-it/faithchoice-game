@@ -1143,6 +1143,11 @@ function showStoryWarning(key) {
   if (continueCardEl) continueCardEl.classList.add('hidden');
   if (catChipsEl) catChipsEl.classList.add('hidden');
   if (tabBarEl) tabBarEl.classList.add('hidden');
+  // Донат-кнопка на маленьких экранах физически некуда деть без нижней навигации — она либо
+  // перекрывает текст выбора/финала истории, либо саму себя приходится опускать в зону, где
+  // и так тесно. Проще прятать её на время самого чтения (экран-предупреждение + сама история)
+  // и возвращать сразу при выходе — см. onSkip()/backToMenu() ниже.
+  if (DONATE_BANNER_ENABLED && donateBtnEl) donateBtnEl.classList.add('hidden');
   storyWarningEl.classList.remove('hidden');
   const continueBtn = document.getElementById('btnStoryWarningContinue');
   const skipBtn = document.getElementById('btnStoryWarningSkip');
@@ -1163,6 +1168,7 @@ function showStoryWarning(key) {
     document.documentElement.style.removeProperty('--accent');
     document.documentElement.style.removeProperty('--btn-text');
     if (tabBarEl) tabBarEl.classList.remove('hidden');
+    if (DONATE_BANNER_ENABLED && donateBtnEl) donateBtnEl.classList.remove('hidden');
     menuEl.classList.remove('hidden');
     renderMenu(); // как в backToMenu() — сам решит видимость menuProgress/continueCard/catChips
   }
@@ -1196,6 +1202,7 @@ function beginStoryPlay(key) {
   if (continueCardEl) continueCardEl.classList.add('hidden');
   if (catChipsEl) catChipsEl.classList.add('hidden');
   if (tabBarEl) tabBarEl.classList.add('hidden');
+  if (DONATE_BANNER_ENABLED && donateBtnEl) donateBtnEl.classList.add('hidden');
   // "Раскрытие обложки" — remove+reflow+add форсирует переигровку CSS-анимации даже если класс уже
   // был на элементе с прошлой истории (просто повторный .add на уже присутствующий класс её не
   // запустит заново без сброса). Тот же приём, что и в pulseHeart/showChoiceArrow.
@@ -1482,6 +1489,7 @@ async function renderCurrent() {
 function backToMenu() {
   continuousListenMode = false; // ручной выход (или клик "История завершена.") всегда останавливает марафон
   if (tabBarEl) tabBarEl.classList.remove('hidden');
+  if (DONATE_BANNER_ENABLED && donateBtnEl) donateBtnEl.classList.remove('hidden');
   revealToken += 1; // отменяет любую ещё доигрывающую печать/озвучку прежней истории
   // Если ушли в меню посреди паузы (озвучка уже остановлена нами же через pause(), новых
   // событий от неё не будет) — без этого промис speakAndReveal завис бы навсегда.
