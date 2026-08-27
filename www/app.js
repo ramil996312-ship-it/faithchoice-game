@@ -671,7 +671,7 @@ pauseBtn.addEventListener('click', togglePause);
 
 function renderLangSwitch() {
   langSwitchEl.innerHTML = LANGS.map(l =>
-    `<button class="lang-btn${l === lang ? ' lang-on' : ''}" data-lang="${l}">${LANG_LABEL[l]}</button>`
+    `<button class="lang-btn${l === lang ? ' lang-on' : ''}" data-lang="${l}"${l === lang ? ' aria-current="true"' : ''}>${LANG_LABEL[l]}</button>`
   ).join('');
   langSwitchEl.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', () => setLang(btn.dataset.lang));

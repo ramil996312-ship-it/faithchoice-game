@@ -118,6 +118,13 @@
     border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 1rem; font-size: 0.88rem;
   }
   .back:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
