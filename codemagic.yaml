@@ -22,6 +22,7 @@ workflows:
         script: cd ios/App && pod install
       - name: Fetch signing files
         script: |
+          keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
