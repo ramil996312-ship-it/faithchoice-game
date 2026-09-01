@@ -19,6 +19,13 @@ function escapeXml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// closingVerse хранит библейскую ссылку в скобках в конце текста, например
+// "«...» (Пс. 26:10)" — озвучке эти цифры не нужны, они остаются только в письменном виде
+// на экране (character.closingVerse в app.js не меняется, показывается полностью).
+function stripCitation(text) {
+  return text.replace(/\s*\([^)]*\)\s*$/, '');
+}
+
 async function synthesize(text, voiceName, attempt = 1) {
   const ssml = `<speak><break time="${LEAD_PAUSE}"/>${escapeXml(text)}</speak>`;
   try {
@@ -64,9 +71,10 @@ async function main() {
     ].filter(([, text]) => !!text);
 
     for (const [suffix, text] of items) {
-      totalChars += text.length;
+      const spokenText = suffix === 'closingverse' ? stripCitation(text) : text;
+      totalChars += spokenText.length;
       try {
-        const mp3 = await synthesize(text, voice);
+        const mp3 = await synthesize(spokenText, voice);
         fs.writeFileSync(path.join(outDir, `${c.key}_${suffix}.mp3`), mp3);
         process.stdout.write('.');
       } catch (err) {
