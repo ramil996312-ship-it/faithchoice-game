@@ -753,6 +753,11 @@ function initDonate() {
   // Реквизиты для ручного банковского перевода — донат пока принимается только так, отдельного
   // платёжного сервиса нет, поэтому CTA-ссылка на DONATE_URL ('#') скрыта как нерабочая.
   document.getElementById('donateModalBankDetails').textContent = t('donateBankDetails') || '';
+  // MBank (QR для мобильных платежей в Кыргызстане) — актуален для той же аудитории, что и карта
+  // «Мир»/банковские реквизиты выше, поэтому показывается по тому же условию (есть donateBankDetails
+  // на этом языке — сейчас только RU), а не всем языкам подряд, как международные BTC/USDT/PayPal.
+  const mbankEl = document.getElementById('donateModalMbank');
+  if (mbankEl) mbankEl.classList.toggle('hidden', !t('donateBankDetails'));
   const cta = document.getElementById('donateModalCta');
   if (DONATE_URL && DONATE_URL !== '#') {
     cta.href = DONATE_URL;
