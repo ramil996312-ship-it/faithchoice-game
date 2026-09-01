@@ -722,7 +722,9 @@
     text-decoration: none; font-size: 0.85rem;
   }
   #aboutLink:hover { color: var(--accent); }
-  #menuProgress { margin-bottom: 1.1rem; }
+  #menuTopRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.1rem; }
+  #menuTopRow #menuProgress { margin-bottom: 0; flex: 1; min-width: 0; }
+  .listen-chip { display: inline-flex; align-items: center; gap: 0.35rem; flex: none; }
   #menuProgress .cp-text {
     text-align: center; font-size: 0.82rem; color: var(--text-dim);
     margin-bottom: 0.45rem; letter-spacing: 0.02em;
@@ -946,7 +948,10 @@
   </div>
 
   <div id="storiesScreen">
-    <div id="menuProgress" class="hidden"></div>
+    <div id="menuTopRow">
+      <div id="menuProgress" class="hidden"></div>
+      <button id="btnListenMode" type="button" class="cat-chip listen-chip hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 14v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2Z"/><path d="M3 14v3a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2Z"/></svg><span id="btnListenModeLabel"></span></button>
+    </div>
     <div id="continueCard" class="hidden"></div>
     <div id="catChips" class="hidden"></div>
     <div id="menu" class="hidden card-row"></div>

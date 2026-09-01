@@ -98,6 +98,7 @@ const topRightEl = document.getElementById('topRight');
 const mainEl = document.querySelector('main');
 const offlineBtnEl = document.getElementById('btnOfflineDownload');
 const menuProgressEl = document.getElementById('menuProgress');
+const btnListenModeEl = document.getElementById('btnListenMode');
 const continueCardEl = document.getElementById('continueCard');
 const catChipsEl = document.getElementById('catChips');
 const storiesScreenEl = document.getElementById('storiesScreen');
@@ -643,6 +644,9 @@ function scheduleAutoListenClick() {
   }, 1400);
 }
 if (autoListenBtn) autoListenBtn.addEventListener('click', () => setAutoListen(!autoListen));
+// Тот же вход в "слушать всё подряд", что и btnEnterListen на экране приветствия (см.
+// startContinuousListen ниже), но доступный прямо со списка историй — не только при первом входе.
+if (btnListenModeEl) btnListenModeEl.addEventListener('click', () => startContinuousListen());
 // Хук паузы для активно звучащей озвучки. speakAndReveal подставляет сюда pause/resume/abandon,
 // пока управляет конкретным <audio> текущей сцены.
 let activeVoicePause = null;
@@ -818,6 +822,8 @@ function applyStaticText() {
   } else {
     document.getElementById('btnAgeGateContinue').textContent = t('ageGateButton');
   }
+  const btnListenModeLabelEl = document.getElementById('btnListenModeLabel');
+  if (btnListenModeLabelEl) btnListenModeLabelEl.textContent = t('btnEnterListen'); // тот же смысл ("Слушать"), переиспользуем перевод
   if (storyWarningEl) {
     document.getElementById('btnStoryWarningContinue').textContent = t('storyWarningContinue');
     document.getElementById('btnStoryWarningSkip').textContent = t('storyWarningSkip');
@@ -1096,6 +1102,7 @@ function renderMenu() {
     btn.addEventListener('click', () => startStory(btn.dataset.key));
   });
   updateMenuProgress(completed);
+  if (btnListenModeEl) btnListenModeEl.classList.remove('hidden');
 }
 
 // Общий прогресс по всей коллекции ("Пройдено X из N") — виден только на экране меню (см.
@@ -1159,6 +1166,7 @@ function showStoryWarning(key) {
   document.getElementById('storyWarningBody').textContent = t('storyWarningBody').replace('{theme}', character.theme);
   menuEl.classList.add('hidden');
   if (menuProgressEl) menuProgressEl.classList.add('hidden');
+  if (btnListenModeEl) btnListenModeEl.classList.add('hidden');
   if (continueCardEl) continueCardEl.classList.add('hidden');
   if (catChipsEl) catChipsEl.classList.add('hidden');
   if (tabBarEl) tabBarEl.classList.add('hidden');
@@ -1218,6 +1226,7 @@ function beginStoryPlay(key) {
   renderProgress();
   menuEl.classList.add('hidden');
   if (menuProgressEl) menuProgressEl.classList.add('hidden');
+  if (btnListenModeEl) btnListenModeEl.classList.add('hidden');
   if (continueCardEl) continueCardEl.classList.add('hidden');
   if (catChipsEl) catChipsEl.classList.add('hidden');
   if (tabBarEl) tabBarEl.classList.add('hidden');
