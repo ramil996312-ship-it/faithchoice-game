@@ -277,7 +277,7 @@ async function scheduleDailyReminder() {
     const perm = await LocalNotifications.checkPermissions();
     if (perm.display !== 'granted') {
       const req = await LocalNotifications.requestPermissions();
-      if (req.display !== 'granted') return;
+      if (req.display !== 'granted') { console.warn('[reminder] permission denied, not scheduling:', req.display); return; }
     }
     // importance: 4 (IMPORTANCE_HIGH) — без этого уведомление тихо оседает в списке, не всплывая
     // баннером поверх экрана; для ежедневного напоминания, которое и должно бросаться в глаза,
@@ -285,19 +285,21 @@ async function scheduleDailyReminder() {
     await LocalNotifications.createChannel({ id: REMINDER_CHANNEL_ID, name: t('title'), importance: 4 }).catch(() => {});
     await LocalNotifications.cancel({ notifications: [{ id: REMINDER_NOTIF_ID }] });
     const key = pickReminderStory();
-    if (!key) return; // всё пройдено полностью — рекомендовать нечего
+    if (!key) { console.warn('[reminder] pickReminderStory() = null (всё пройдено, обе концовки везде), не планирую'); return; }
     const character = content().CHARACTERS.find(c => c.key === key);
+    const { hour, minute } = getReminderTime();
     await LocalNotifications.schedule({
       notifications: [{
         id: REMINDER_NOTIF_ID,
         channelId: REMINDER_CHANNEL_ID,
         title: t('reminderTitle'),
         body: t('reminderBody').replace('{name}', character.name),
-        schedule: { on: getReminderTime(), allowWhileIdle: true },
+        schedule: { on: { hour, minute }, allowWhileIdle: true },
         extra: { story: key },
       }],
     });
-  } catch {} // нет разрешения на уведомления и т.п. — приложение просто не будет напоминать, не критично
+    console.log(`[reminder] запланировано на ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}, история: ${key}`);
+  } catch (err) { console.warn('[reminder] scheduleDailyReminder failed:', err); } // напр. точные будильники запрещены в системных настройках — приложение просто не будет напоминать, не критично
 }
 
 // Тап по напоминанию открывает именно ту историю, что была в нём указана, а не общее меню — так же,
