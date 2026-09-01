@@ -74,7 +74,10 @@ function detectBrowserLang() {
   }
   return 'en';
 }
-let lang = LANGS.includes(localStorage.getItem('lang')) ? localStorage.getItem('lang') : detectBrowserLang();
+// window.__bootLang выставлен инлайн-скриптом в index.html до подключения content-<lang>.js — тот же
+// расчёт, что ниже, только раньше по времени. Фоллбэк нужен для reserve-preview.html и любых других
+// страниц, использующих app.js без этого инлайн-скрипта.
+let lang = window.__bootLang || (LANGS.includes(localStorage.getItem('lang')) ? localStorage.getItem('lang') : detectBrowserLang());
 
 const ageGateEl = document.getElementById('ageGate');
 const menuEl = document.getElementById('menu');
@@ -249,7 +252,7 @@ function pickReminderStory() {
   const data = content();
   const completed = getCompleted();
   const endings = getCompletedEndings();
-  const chars = data.CHARACTERS.filter(c => data.STORIES[c.key]);
+  const chars = data.CHARACTERS.filter(c => data.STORY_KEYS.includes(c.key));
   for (const c of chars) {
     if (!completed.has(c.key)) return c.key;
   }
@@ -307,7 +310,7 @@ async function scheduleDailyReminder() {
 if (isNative && LocalNotifications) {
   LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
     const key = action.notification && action.notification.extra && action.notification.extra.story;
-    if (key && content().STORIES[key] && ageGateEl.classList.contains('hidden')) startStory(key);
+    if (key && content().STORY_KEYS.includes(key) && ageGateEl.classList.contains('hidden')) startStory(key);
   });
 }
 
@@ -435,9 +438,10 @@ async function downloadOfflineForCurrentLang() {
   offlineCancelRequested = false;
   updateOfflineBtn();
   const l = lang; // язык мог бы смениться посреди долгой закачки — фиксируем, на каком языке качаем
+  await loadContentStories(l); // тексты сцен могли ещё не догрузиться в фоне — они нужны ниже (data.STORIES[k].scenes)
   const data = window.Content[l]; // не content()/lang напрямую — setLang() блокирует переключение,
   // пока идёт закачка (см. её начало), но так функция остаётся корректной и без этой защиты
-  const keys = data.CHARACTERS.map(c => c.key).filter(k => data.STORIES[k]);
+  const keys = data.CHARACTERS.map(c => c.key).filter(k => data.STORY_KEYS.includes(k));
   let done = 0;
   const total = keys.reduce((sum, k) => sum + Object.keys(data.STORIES[k].scenes).length, 0);
   let hadError = false;
@@ -684,8 +688,39 @@ function renderLangSwitch() {
   });
 }
 
-function setLang(l) {
+// content-<lang>.js разделён build-content-split.js на meta (CHARACTERS+STORY_KEYS — нужно для меню,
+// лёгкое) и stories (тексты сцен — тяжёлое). Для window.__bootLang meta уже подключён в index.html
+// синхронно, stories догружаются в фоне сразу после старта (см. вызов ниже). Для остальных языков оба
+// файла грузятся по требованию при переключении. Кэш промисов на файл — чтобы двойной клик по кнопке
+// языка/карточке, пока файл ещё не пришёл, не плодил повторные <script>-теги.
+const scriptLoadPromises = {};
+function loadScript(src) {
+  if (scriptLoadPromises[src]) return scriptLoadPromises[src];
+  scriptLoadPromises[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => { delete scriptLoadPromises[src]; reject(new Error('не удалось загрузить ' + src)); };
+    document.head.appendChild(s);
+  });
+  return scriptLoadPromises[src];
+}
+function loadContentMeta(l) {
+  if (window.Content && window.Content[l] && window.Content[l].CHARACTERS) return Promise.resolve();
+  return loadScript(`content-${l}-meta.js?v=20260901`);
+}
+function loadContentStories(l) {
+  if (window.Content && window.Content[l] && window.Content[l].STORIES) return Promise.resolve();
+  return loadScript(`content-${l}-stories.js?v=20260901`);
+}
+// Не await — запускаем закачку тяжёлых текстов языка открытия сразу в фоне, не блокируя первую отрисовку
+// меню (которому хватает meta, уже подключённого синхронно в index.html).
+loadContentStories(lang);
+
+async function setLang(l) {
   if (l === lang || offlineDownloadRunning) return;
+  try { await Promise.all([loadContentMeta(l), loadContentStories(l)]); }
+  catch (e) { console.error(e); return; } // сеть оборвалась посреди переключения — остаёмся на прежнем языке
   lang = l;
   localStorage.setItem('lang', lang);
   document.documentElement.lang = lang; // иначе скринридер/перенос слов остаются настроены на русский для всех остальных языков
@@ -853,7 +888,7 @@ function applyStaticText() {
 // близкому человеку сразу нужную историю, а не общую ссылку на меню.
 function getSharedStoryKey() {
   const key = new URLSearchParams(location.search).get('story');
-  return key && content().STORIES[key] ? key : null;
+  return key && content().STORY_KEYS.includes(key) ? key : null;
 }
 function enterApp() {
   scheduleDailyReminder();
@@ -917,7 +952,7 @@ function initAgeGate() {
 let continuousListenMode = false;
 function startContinuousListen() {
   const data = content();
-  const key = pickReminderStory() || (data.CHARACTERS.find(c => data.STORIES[c.key]) || {}).key;
+  const key = pickReminderStory() || (data.CHARACTERS.find(c => data.STORY_KEYS.includes(c.key)) || {}).key;
   if (!key) return;
   continuousListenMode = true;
   if (activeTab !== 'stories') showScreen('stories');
@@ -1100,7 +1135,7 @@ function renderMenu() {
   renderCatChips();
   const chars = content().CHARACTERS.filter(c => activeCategory === 'all' || CATEGORY_BY_KEY[c.key] === activeCategory);
   menuEl.innerHTML = chars.map(c => {
-    const available = !!content().STORIES[c.key];
+    const available = content().STORY_KEYS.includes(c.key);
     const done = completed.has(c.key);
     const statusText = done ? t('storyDone') : started.has(c.key) ? t('profileInProgressLabel') : '';
     return storyCardHtml(c, { done, statusText, extraClass: available ? '' : ' card-soon' });
@@ -1116,8 +1151,8 @@ function renderMenu() {
 // startStory/backToMenu), даёт ориентир по масштабу коллекции, которого раньше не было вообще.
 function updateMenuProgress(completed) {
   if (!menuProgressEl) return;
-  const total = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
-  const done = content().CHARACTERS.filter(c => content().STORIES[c.key] && completed.has(c.key)).length;
+  const total = content().CHARACTERS.filter(c => content().STORY_KEYS.includes(c.key)).length;
+  const done = content().CHARACTERS.filter(c => content().STORY_KEYS.includes(c.key) && completed.has(c.key)).length;
   if (total === 0) { menuProgressEl.classList.add('hidden'); return; }
   // Строка вида "Пройдено {done} из {total} · ~3 мин на историю" — во всех 5 языках устойчиво
   // разделена на " · " (счёт / метаинформация), это позволяет визуально выделить только числа,
@@ -1147,7 +1182,7 @@ function markStoryWarned(key) {
 }
 
 function startStory(key) {
-  if (!content().STORIES[key]) { alert(t('comingSoon')); return; }
+  if (!content().STORY_KEYS.includes(key)) { alert(t('comingSoon')); return; }
   // В режиме "слушать все истории подряд" (continuousListenMode) показ предупреждения перед каждой
   // следующей историей сломал бы саму идею hands-off марафона — вход в этот режим сам по себе явный
   // клик, а общее предупреждение о тяжёлых темах читатель уже видел на ageGate. storyWarningEl может
@@ -1210,8 +1245,29 @@ function showStoryWarning(key) {
   skipBtn.addEventListener('click', onSkip);
 }
 
-function beginStoryPlay(key) {
-  ensureAudio(); // разблокировать звук именно здесь — это прямой клик пользователя (Продолжить/карточка)
+// Редкий случай на очень медленной сети: читатель уже нажал "начать", а тексты сцен текущего языка
+// (loadContentStories(), запущен в фоне при старте/переключении языка) ещё не догрузились. Ждём
+// молча первые STORIES_WAIT_BANNER_DELAY мс — в норме фон успевает первым, и баннер не появляется;
+// иначе показываем текстовый статус, а не оставляем кнопку молча "зависшей".
+const STORIES_WAIT_BANNER_DELAY = 200;
+async function waitForStories(l) {
+  if (window.Content[l] && window.Content[l].STORIES) return;
+  let banner = null;
+  const timer = setTimeout(() => {
+    banner = document.createElement('div');
+    banner.className = 'stories-wait-banner';
+    banner.textContent = t('storiesLoading');
+    document.body.appendChild(banner);
+  }, STORIES_WAIT_BANNER_DELAY);
+  try { await loadContentStories(l); }
+  finally { clearTimeout(timer); if (banner) banner.remove(); }
+}
+
+async function beginStoryPlay(key) {
+  ensureAudio(); // разблокировать звук именно здесь, ДО await — это прямой клик пользователя
+  // (Продолжить/карточка), а на iOS/Safari разблокировка звука должна остаться синхронной частью
+  // обработчика жеста, иначе после await она может перестать засчитываться как ответ на клик.
+  if (!content().STORIES?.[key]) await waitForStories(lang);
   markStarted(key);
   // В обычном режиме сбрасывается на каждую новую историю (активное решение читателя). В режиме
   // "слушать все подряд" (continuousListenMode) должен, наоборот, оставаться включённым и на
@@ -1603,7 +1659,7 @@ function renderProfile() {
   const endings = getCompletedEndings();
   const counts = getChoiceCounts();
   const totalDecisions = counts.light + counts.dark;
-  const totalStories = content().CHARACTERS.filter(c => content().STORIES[c.key]).length;
+  const totalStories = content().CHARACTERS.filter(c => content().STORY_KEYS.includes(c.key)).length;
   const inProgress = Math.max(0, getStarted().size - completed.size);
 
   // Раздел называется "Пройденные И ТЕКУЩИЕ" (profileCompletedSection), но раньше сюда попадали
@@ -1615,10 +1671,10 @@ function renderProfile() {
   // (startStory), как и на главном экране — раньше строки списка были некликабельными.
   const started = getStarted();
   const inProgressCards = content().CHARACTERS
-    .filter(c => content().STORIES[c.key] && started.has(c.key) && !completed.has(c.key))
+    .filter(c => content().STORY_KEYS.includes(c.key) && started.has(c.key) && !completed.has(c.key))
     .map(c => storyCardHtml(c, { done: false, statusText: t('profileInProgressLabel') })).join('');
   const completedCards = content().CHARACTERS
-    .filter(c => content().STORIES[c.key] && completed.has(c.key))
+    .filter(c => content().STORY_KEYS.includes(c.key) && completed.has(c.key))
     .sort((a, b) => (completedAt[b.key] || 0) - (completedAt[a.key] || 0))
     .map(c => {
       const path = (endings[c.key] || []).includes('dark') && !(endings[c.key] || []).includes('light') ? 'dark' : 'light';

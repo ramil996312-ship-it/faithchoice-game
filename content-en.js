@@ -88,7 +88,7 @@
     { id: 28, key: 'karina', name: 'Carrie', gender: 'ж', theme: 'sex industry, leaving through non-judgmental ministry', softTheme: "a path without judgment", color: '#c63a6b',
       closingVerse: 'Neither do I condemn you; go, and from now on sin no more. (John 8:11)',
       closingPrayer: 'Lord, thank You for the people who did not turn away from me but simply stayed, without judgment, while I found my way back. Help me be that kind of safe place for someone else.' },
-    { id: 29, key: 'darya', name: 'Dana', gender: 'ж', theme: 'athlete at the peak of fame, hidden shame and emptiness', softTheme: "fame, and a hidden emptiness", color: '#7bc639',
+    { id: 29, key: 'darya', name: 'Dana', gender: 'ж', theme: 'athlete at the peak of fame, who survived childhood sexual abuse and hid it in secret for years', softTheme: "fame, and a hidden emptiness", color: '#7bc639',
       closingVerse: 'For what does it profit a man to gain the whole world and forfeit his soul? (Mark 8:36)',
       closingPrayer: 'Lord, I had everything others dream of, and I was still empty inside. Thank You that You were not satisfied with my achievements — You wanted me. Fill the place that no medal, no applause, could fill.' },
     { id: 30, key: 'milana', name: 'Melanie', gender: 'ж', theme: 'cancer diagnosis, peace despite fear', softTheme: "illness, and peace within", color: '#c75538',

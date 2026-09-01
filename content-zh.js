@@ -89,7 +89,7 @@
     { id: 28, key: 'karina', name: '凯琳', gender: 'ж', theme: '性产业,通过不带定罪的事工离开', softTheme: "不被定罪的路", color: '#c63a6b',
       closingVerse: '"我也不定你的罪。去吧，从此不要再犯罪了！"（约翰福音 8:11）',
       closingPrayer: '主啊，谢谢那些没有转身离开我、只是在我寻找回家的路时静静陪伴、不加论断的人。求你帮助我也成为别人这样一个安全的地方。' },
-    { id: 29, key: 'darya', name: '黛雅', gender: 'ж', theme: '巅峰时期的运动员,隐藏的羞耻与空虚', softTheme: "荣耀与隐藏的空虚", color: '#7bc639',
+    { id: 29, key: 'darya', name: '黛雅', gender: 'ж', theme: '巅峰时期的运动员,童年曾遭受性侵,多年来一直独自隐藏这段伤痛', softTheme: "荣耀与隐藏的空虚", color: '#7bc639',
       closingVerse: '"人就是赚得全世界，赔上自己的生命，有什么益处呢？"（马可福音 8:36）',
       closingPrayer: '主啊，我拥有别人梦寐以求的一切，内心却依然空虚。谢谢你没有满足于我的成就——你要的是我这个人。求你填满那奖牌和掌声都填不满的地方。' },
     { id: 30, key: 'milana', name: '明兰', gender: 'ж', theme: '癌症诊断,尽管恐惧仍有平安', softTheme: "疾病与内心的平安", color: '#c75538',

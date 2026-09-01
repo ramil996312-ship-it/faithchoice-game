@@ -561,6 +561,15 @@
     padding: 0.5rem; margin: -0.5rem 0 1rem; cursor: pointer;
   }
   #pauseHint.pause-visible { display: block; }
+  /* ponytail: текстовый статус на случай, если тексты сцен ещё не догрузились в фоне (очень
+     медленная сеть) к моменту, когда читатель уже нажал начать историю — см. waitForStories()
+     в app.js. Появляется с задержкой ~200мс, чтобы не мелькать в обычном случае (данные почти
+     всегда уже готовы). */
+  .stories-wait-banner {
+    position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 50;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.85rem; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
   .line {
     background: var(--surface); border-left: 3px solid var(--accent); position: relative;
     padding: 0.75rem 1rem; border-radius: 3px 8px 3px 3px; margin-bottom: 0.6rem;
@@ -1067,11 +1076,29 @@
 
 <script src="engine.js?v=20260730"></script>
 <script src="i18n.js?v=20260730"></script>
-<script src="content-ru.js?v=20260730"></script>
-<script src="content-en.js?v=20260730"></script>
-<script src="content-es.js?v=20260730"></script>
-<script src="content-zh.js?v=20260730"></script>
-<script src="content-hi.js?v=20260730"></script>
+<script>
+  // ponytail: раньше все 5 content-<lang>.js грузились всегда на каждый заход (~2МБ суммарно,
+  // ~35с до первой доступной истории на Slow 3G) — теперь синхронно грузится только лёгкий
+  // content-<lang>-meta.js (имена/темы для меню, ~30-60КБ), а тяжёлые тексты историй
+  // content-<lang>-stories.js догружаются в фоне (см. build-content-split.js, loadContentStories()
+  // и loadContentLang() в app.js). ЛЮБАЯ правка content-<lang>.js требует пересборки:
+  // node build-content-split.js — иначе на сайте будут старые тексты историй.
+  var __LANGS = ['ru', 'en', 'es', 'zh', 'hi'];
+  window.__bootLang = __LANGS.includes(localStorage.getItem('lang')) ? localStorage.getItem('lang') : (function () {
+    var candidates = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+    for (var i = 0; i < candidates.length; i++) {
+      var prefix = candidates[i].toLowerCase().slice(0, 2);
+      if (__LANGS.includes(prefix)) return prefix;
+    }
+    return 'en';
+  })();
+  document.write('<script src="content-' + window.__bootLang + '-meta.js?v=20260901"><\/script>');
+  // ponytail: пробовал добавить сюда <link rel=preload> на content-<lang>-stories.js, чтобы качать
+  // его параллельно с app.js, а не после — по факту на throttled-сети это ЗАМЕДЛЯЛО именно готовность
+  // меню (preload конкурирует за полосу с meta/app.js), при небольшом выигрыше в скорости прихода
+  // текста истории. Меню — приоритет (см. запрос ниже в app.js), поэтому оставлено как есть:
+  // content-<lang>-stories.js запрашивается из app.js (loadContentStories()), после критического пути.
+</script>
 <script src="app.js?v=20260730"></script>
 </body>
 </html>

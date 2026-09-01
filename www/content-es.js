@@ -89,7 +89,7 @@
     { id: 28, key: 'karina', name: 'Karina', gender: 'ж', theme: 'industria sexual, salida a través de un ministerio sin juicio', softTheme: "un camino sin condena", color: '#c63a6b',
       closingVerse: '«Ni yo te condeno; vete, y no peques más» (Jn. 8:11)',
       closingPrayer: 'Señor, gracias por las personas que no se apartaron de mí, sino que simplemente se quedaron, sin juzgar, mientras encontraba el camino de regreso. Ayúdame a ser ese lugar seguro para alguien más.' },
-    { id: 29, key: 'darya', name: 'Diana', gender: 'ж', theme: 'deportista en la cima de la fama, vergüenza y vacío ocultos', softTheme: "fama y un vacío oculto", color: '#7bc639',
+    { id: 29, key: 'darya', name: 'Diana', gender: 'ж', theme: 'deportista en la cima de la fama, que sobrevivió a abuso sexual infantil y lo ocultó en secreto durante años', softTheme: "fama y un vacío oculto", color: '#7bc639',
       closingVerse: '«Porque ¿qué aprovechará al hombre, si ganare todo el mundo, y perdiere su alma?» (Mr. 8:36)',
       closingPrayer: 'Señor, tenía todo con lo que otros sueñan, y por dentro seguía vacía. Gracias porque Tú no te conformaste con mis logros — me querías a mí. Llena el lugar que ninguna medalla, ningún aplauso, pudo llenar.' },
     { id: 30, key: 'milana', name: 'Milagros', gender: 'ж', theme: 'diagnóstico de cáncer, paz a pesar del miedo', softTheme: "enfermedad y paz interior", color: '#c75538',
