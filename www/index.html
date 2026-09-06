@@ -731,6 +731,10 @@
     text-decoration: none; font-size: 0.85rem;
   }
   #aboutLink:hover { color: var(--accent); }
+  #copyrightNotice {
+    text-align: center; margin: 0.4rem 0 0; color: var(--text-soft);
+    font-size: 0.68rem; letter-spacing: 0.01em;
+  }
   #menuTopRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.1rem; }
   #menuTopRow #menuProgress { margin-bottom: 0; flex: 1; min-width: 0; }
   .listen-chip { display: inline-flex; align-items: center; gap: 0.35rem; flex: none; }
@@ -842,6 +846,7 @@
   .cat-chip.active:active { box-shadow: 0 0 0 color-mix(in srgb, var(--icon-gold) 55%, black 45%), inset 0 2px 4px rgba(0,0,0,0.25); }
   /* ~ (любой следующий сиблинг), не + (сразу следующий) — видны только вместе с меню, не поверх игры/гейта. */
   #menu.hidden ~ #aboutLink { display: none; }
+  #menu.hidden ~ #copyrightNotice { display: none; }
   #menu.hidden ~ #reminderRow { display: none; }
   #reminderRow {
     display: flex; align-items: center; justify-content: center; gap: 0.5rem;
@@ -983,6 +988,7 @@
       <input type="time" id="reminderTimeInput">
     </div>
     <a id="aboutLink" href="about.html">О проекте / связаться с нами</a>
+    <p id="copyrightNotice">© 2026 Рамиль Гильфанов · faithchoice.net · Все права защищены</p>
   </div>
 
   <div id="profileScreen" class="hidden"></div>
