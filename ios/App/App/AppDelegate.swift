@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,6 +8,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Озвучка истории — обычный <audio> в WKWebView (см. app.js, new Audio()). Одного
+        // UIBackgroundModes:audio в Info.plist недостаточно — без категории .playback сессия по
+        // умолчанию (.soloAmbient/.ambient) всё равно глушится системой при блокировке экрана/уходе
+        // в фон. Это ровно тот же функционал, что на Android даёт FOREGROUND_SERVICE_MEDIA_PLAYBACK
+        // (см. AndroidManifest.xml) — здесь его iOS-эквивалент.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
         // Override point for customization after application launch.
         return true
     }
