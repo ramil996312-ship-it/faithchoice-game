@@ -943,6 +943,20 @@
   <div id="langSwitch"></div>
   <div id="basedOnBadge"></div>
 
+  <script>
+    // ponytail: убирает CLS-скачок для ПОВТОРНЫХ посетителей (реально измерено — Cloudflare Web
+    // Analytics показал 100% "Poor" CLS на единственном визите). Причина была в initAgeGate() (app.js):
+    // он прячет #ageGate и показывает меню уже ПОСЛЕ первой отрисовки страницы, без клика — браузер
+    // успевает нарисовать большую карточку предупреждения на один кадр раньше, чем JS её уберёт.
+    // Здесь — та же проверка, выполненная синхронно ДО того, как браузер дойдёт до #ageGate ниже,
+    // чтобы этот кадр вообще не рисовался. Условие должно 1:1 совпадать с initAgeGate() — если то
+    // условие изменится, поправить и здесь. content()/STORY_KEYS ещё не загружены на этом шаге,
+    // поэтому просто проверяем наличие ?story= в ссылке (без валидации ключа) — этого достаточно:
+    // худший случай при рассинхроне — редкий кадр мигания остаётся, не поломанная логика показа.
+    if (localStorage.getItem('ageGateAccepted') === '1' && !new URLSearchParams(location.search).get('story')) {
+      document.write('<style>#ageGate{display:none}</style>');
+    }
+  </script>
   <div id="ageGate">
     <div class="ageGateEmblem" aria-hidden="true"><svg viewBox="0 -24 100 124" fill="none" stroke="var(--icon-gold)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M50 22 C50 22 42 14 20 15 C13 15 9 18 9 18 L9 78 C9 78 14 74 20 74 C40 74 50 82 50 82"/><path d="M50 22 C50 22 58 14 80 15 C87 15 91 18 91 18 L91 78 C91 78 86 74 80 74 C60 74 50 82 50 82"/><line x1="50" y1="22" x2="50" y2="82"/><path d="M28 4 L28 -14 L38 -6 L50 -20 L62 -6 L72 -14 L72 4 Z" stroke-width="7" transform="translate(0,-2)"/></svg></div>
     <h2 id="welcomeGreetingText"></h2>
