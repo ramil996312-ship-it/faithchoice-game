@@ -39,10 +39,16 @@
 `Выбирай путь: тьма или свет` (28 знаков)
 
 **Короткое описание (в Google Play показывается сразу под названием в поиске, до 80 знаков):**
-- Вариант A (основной): `50 реальных христианских историй. Выбирай путь — тьма или свет.` (65 знаков)
+- Вариант A (основной, с упоминанием Faith Choice — принято 2026-09-01):
+  `Faith Choice: реальные истории веры. Путь — тьма или свет.` (60 знаков)
 - Вариант B (для A/B-теста через Store Listing Experiments — это поле реально тестируется, в отличие
-  от названия): `Реальные судьбы, ваш выбор. 50 историй о вере, тьме и надежде.` (62 знака) — тот же
+  от названия): `Реальные судьбы, ваш выбор. Истории о вере, тьме и надежде.` (60 знаков) — тот же
   смысл, но с акцентом на эмоцию (судьба/выбор) вместо механики игры вперёд.
+
+*Число историй сознательно убрано из всей маркетинговой копии 2026-09-01: сейчас в игре 50, но готов
+ещё резервный батч из 49 (не влит в основной контент), и общее число будет расти дальше. Текст,
+завязанный на конкретную цифру, пришлось бы вручную поправлять при каждом расширении контента —
+решили не привязываться.*
 
 Название само по себе не говорит, что это игра с выбором — поэтому подзаголовок и короткое описание
 специально несут именно эту мысль, сразу под названием.
@@ -58,7 +64,7 @@
 ключевые слова уже вписаны естественно по тексту):**
 
 ```
-Истории Веры — бесплатная интерактивная игра из 50 реальных, задокументированных
+Истории Веры — бесплатная интерактивная игра из реальных, задокументированных
 христианских свидетельств.
 
 Каждая история — не проповедь и не статистика, а прожитый опыт: зависимость, тюрьма, потеря,
@@ -70,7 +76,7 @@
 и нашедших дорогу к вере.
 
 Почему это не похоже на другие христианские приложения:
-— 50 историй с реальной основой, а не вымышленные притчи
+— истории с реальной основой, а не вымышленные притчи
 — формат "выбор с последствиями", привычный по историям в духе Choices/Episode — но с настоящими
   свидетельствами веры вместо художественного вымысла
 — бесплатно, без регистрации, без рекламы между историями
@@ -91,11 +97,11 @@
 `Faith Choice`
 
 **Подзаголовок (только для App Store, до 30 знаков — несёт смысл, которого больше нет в названии):**
-`50 Real Christian Testimonies` (29 знаков)
+`Real Christian Testimonies` (27 знаков)
 
 **Короткое описание (до 80 знаков):**
-- Вариант A (основной): `50 true Christian testimonies. Choose your path — light or darkness.` (70 знаков)
-- Вариант B (для A/B-теста): `Real lives, your choice. 50 stories of faith, darkness, and hope.` (66 знаков)
+- Вариант A (основной): `True Christian testimonies. Choose your path — light or darkness.` (68 знаков)
+- Вариант B (для A/B-теста): `Real lives, your choice. Stories of faith, darkness, and hope.` (64 знака)
 
 **Скрытое поле «ключевые слова» (только для App Store, до 100 знаков — слова «faith», «choice»,
 «christian», «testimonies», «real», «50» уже не нужны здесь, они и так учитываются из названия и
@@ -105,7 +111,7 @@
 **Полное описание (черновик):**
 
 ```
-Faith Choice — a free interactive game of 50 real, documented Christian testimonies, told as true
+Faith Choice — a free interactive game of real, documented Christian testimonies, told as true
 stories where you choose the path.
 
 Each story isn't a sermon or a statistic — it's lived experience: addiction, prison, betrayal, loss,
@@ -117,7 +123,7 @@ circle who fell and found faith in prison, to teenagers who lived through addict
 life on the street — and found their way to God.
 
 What makes this different from other Christian apps:
-— 50 stories with a real, documented basis — not fictional parables
+— stories with a real, documented basis — not fictional parables
 — "choice with consequences" gameplay, the format you know from Choices/Episode — but built on real
   testimonies of faith instead of fiction
 — free, no sign-up, no ads between stories
