@@ -115,6 +115,15 @@ const reminderTimeInputEl = document.getElementById('reminderTimeInput');
 function content() { return window.Content[lang]; }
 function t(key) { return I18N[lang][key]; }
 
+// Любая запись в localStorage может упасть с QuotaExceededError (квота ~5 МБ на домен) или быть
+// запрещена вовсе (приватный режим Safari). Ни одна такая запись не стоит того, чтобы оборвать
+// выполнение: незащищённый setItem внутри markCompleted стоял ПЕРВОЙ строкой в блоке финала
+// истории — исключение там уносило с собой стих, молитву и кнопки «История завершена»/«Поделиться».
+function setLS(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch { return false; }
+}
+
 // Отметка "история пройдена" — локально в браузере, чтобы галочка в меню не давала повторять уже прослушанное.
 function getCompleted() {
   try { return new Set(JSON.parse(localStorage.getItem('completedStories') || '[]')); }
@@ -124,11 +133,11 @@ function markCompleted(key) {
   const done = getCompleted();
   if (done.has(key)) return;
   done.add(key);
-  localStorage.setItem('completedStories', JSON.stringify([...done]));
+  setLS('completedStories', JSON.stringify([...done]));
   try {
     const at = JSON.parse(localStorage.getItem('completedAt') || '{}');
     at[key] = Date.now();
-    localStorage.setItem('completedAt', JSON.stringify(at));
+    setLS('completedAt', JSON.stringify(at));
   } catch {}
 }
 function getCompletedAt() {
@@ -145,7 +154,7 @@ function markStarted(key) {
   const started = getStarted();
   if (started.has(key)) return;
   started.add(key);
-  try { localStorage.setItem('startedStories', JSON.stringify([...started])); } catch {}
+  setLS('startedStories', JSON.stringify([...started]));
 }
 // Сколько раз слушатель выбирал светлый/тёмный путь — считаем по каждому реальному клику на
 // развилке (не только по финалу истории), это и есть "твои решения" в профиле.
@@ -156,7 +165,7 @@ function getChoiceCounts() {
 function bumpChoiceCount(dir) {
   const counts = getChoiceCounts();
   counts[dir] = (counts[dir] || 0) + 1;
-  localStorage.setItem('choiceCounts', JSON.stringify(counts));
+  setLS('choiceCounts', JSON.stringify(counts));
 }
 
 // Какие концовки (light/dark) игрок уже видел у каждой истории — нужно только для утреннего
@@ -170,7 +179,7 @@ function markEndingSeen(key, path) {
   const endings = getCompletedEndings();
   if (!endings[key]) endings[key] = [];
   if (!endings[key].includes(path)) endings[key].push(path);
-  localStorage.setItem('completedEndings', JSON.stringify(endings));
+  setLS('completedEndings', JSON.stringify(endings));
 }
 
 exitBtn.addEventListener('click', backToMenu);
@@ -240,7 +249,7 @@ function initReminderTimeUI() {
   reminderTimeInputEl.value = localStorage.getItem('reminderTime') || DEFAULT_REMINDER_TIME;
   reminderTimeInputEl.addEventListener('change', () => {
     if (!reminderTimeInputEl.value) return; // пользователь очистил поле, а не выбрал время — игнорируем
-    localStorage.setItem('reminderTime', reminderTimeInputEl.value);
+    setLS('reminderTime', reminderTimeInputEl.value);
     scheduleDailyReminder();
   });
 }
@@ -410,7 +419,7 @@ function getOfflineDoneLangs() {
 function markOfflineDoneLang(l) {
   const done = getOfflineDoneLangs();
   done.add(l);
-  localStorage.setItem('offlineDoneLangs', JSON.stringify([...done]));
+  setLS('offlineDoneLangs', JSON.stringify([...done]));
 }
 // Дошли до конца списка, но хотя бы один файл не скачался — не редкость на нестабильной сети.
 // Не показываем "не готово" тем же текстом, что и "ещё не пробовали" — иначе непонятно, была ли
@@ -593,7 +602,7 @@ function applyTheme() {
 }
 themeBtn.addEventListener('click', () => {
   theme = theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('theme', theme);
+  setLS('theme', theme);
   applyTheme();
 });
 applyTheme();
@@ -604,7 +613,7 @@ function updateMuteBtn() { muteBtn.textContent = soundOn ? '🔊' : '🔇'; }
 // переключить флаг на уже играющем элементе — без остановки/перезапуска.
 muteBtn.addEventListener('click', () => {
   soundOn = !soundOn;
-  localStorage.setItem('soundOn', soundOn ? '1' : '0');
+  setLS('soundOn', soundOn ? '1' : '0');
   currentAudio.muted = !soundOn;
   updateMuteBtn();
 });
@@ -722,7 +731,7 @@ async function setLang(l) {
   try { await Promise.all([loadContentMeta(l), loadContentStories(l)]); }
   catch (e) { console.error(e); return; } // сеть оборвалась посреди переключения — остаёмся на прежнем языке
   lang = l;
-  localStorage.setItem('lang', lang);
+  setLS('lang', lang);
   document.documentElement.lang = lang; // иначе скринридер/перенос слов остаются настроены на русский для всех остальных языков
   renderLangSwitch();
   applyStaticText();
@@ -931,7 +940,7 @@ function initAgeGate() {
     enterApp();
     return;
   }
-  const accept = () => { localStorage.setItem('ageGateAccepted', '1'); ageGateEl.classList.add('hidden'); };
+  const accept = () => { setLS('ageGateAccepted', '1'); ageGateEl.classList.add('hidden'); };
   // reserve-preview.html не получил экран приветствия с тремя входами (нет профиля/вкладок, куда вело
   // бы "Слушать" или "Рассказать свою историю") — там как был, так и остался единственный btnAgeGateContinue.
   const enterReadBtn = document.getElementById('btnEnterRead');
@@ -1178,7 +1187,7 @@ function getWarnedStories() {
 function markStoryWarned(key) {
   const seen = getWarnedStories();
   seen.add(key);
-  localStorage.setItem('storyWarningsSeen', JSON.stringify(Array.from(seen)));
+  setLS('storyWarningsSeen', JSON.stringify(Array.from(seen)));
 }
 
 function startStory(key) {
@@ -1639,14 +1648,40 @@ function formatDate(ts) {
 
 function getProfilePhoto() { return localStorage.getItem('profilePhoto') || ''; }
 function saveProfilePhoto(dataUrl) {
-  try { localStorage.setItem('profilePhoto', dataUrl); } catch {} // квота localStorage переполнена — переживём, просто не сохранится
+  setLS('profilePhoto', dataUrl); // не влезло — переживём, просто не сохранится
   renderProfile();
 }
+// Фото с телефона — это 3-8 МБ, в base64 ещё +33%. В localStorage (квота ~5 МБ) такое либо не
+// влезает вовсе, либо влезает и не оставляет места ни на что другое. А показывается оно кружком
+// ~4rem, поэтому всё, что больше PHOTO_MAX_PX, — чистый вред: renderProfile каждый раз собирает
+// многомегабайтную HTML-строку с этим base64 внутри, и профиль заметно подвисает.
+const PHOTO_MAX_PX = 256;
+
+function downscalePhoto(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, PHOTO_MAX_PX / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      } catch { resolve(dataUrl); } // не вышло ужать — пусть попробует сохраниться как есть
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function onProfilePhotoPicked(input) {
   const file = input.files && input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => saveProfilePhoto(reader.result);
+  reader.onload = async () => saveProfilePhoto(await downscalePhoto(reader.result));
   reader.readAsDataURL(file);
 }
 
@@ -1655,7 +1690,7 @@ function editProfileName() {
   const current = getProfileName();
   const next = window.prompt(t('profileNamePrompt'), current);
   if (next === null) return; // отмена
-  localStorage.setItem('profileName', next.trim());
+  setLS('profileName', next.trim());
   renderProfile();
 }
 
