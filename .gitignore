@@ -41,3 +41,6 @@ ios/App/build/
 ios/App/Pods/
 .appstore-connect-key.txt
 google-play-key.json
+
+# Граф кода — генерируется бесплатно из исходников, в репозитории не нужен
+graphify-out/
