@@ -20,6 +20,17 @@ workflows:
         script: npm install
       - name: Cap sync iOS
         script: npx cap sync ios
+      - name: Strip web-only files from the iOS bundle
+        script: |
+          # www/ is shared with faithchoice.net, which still needs the full content-<lang>.js and the
+          # reserve preview. The app loads only content-<lang>-meta.js / -stories.js (index.html, app.js),
+          # so drop the rest from the iOS copy only (~3.8 MB). www/ and the site are untouched.
+          cd ios/App/App/public
+          rm -f content-ru.js content-en.js content-es.js content-zh.js content-hi.js content-reserve-*.js reserve-preview.html
+          for l in ru en es zh hi; do
+            [ -s "content-$l-meta.js" ] && [ -s "content-$l-stories.js" ] || { echo "missing split content for $l"; exit 1; }
+          done
+          ls -l content-*.js
       - name: Install CocoaPods dependencies
         script: cd ios/App && pod install
       - name: Fetch signing files

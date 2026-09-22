@@ -1,0 +1,4 @@
+/* 图标下方的名称（与 i18n.js 中的 zh.title 一致） */
+"CFBundleDisplayName" = "真实的故事";
+"NSMicrophoneUsageDescription" = "只有当你在提交自己的信仰故事时亲自点按语音输入按钮，才会使用麦克风，用于口述文字而不必打字。";
+"NSSpeechRecognitionUsageDescription" = "语音识别仅用于提交故事表单中的语音输入，把你口述的内容转换为文字。";

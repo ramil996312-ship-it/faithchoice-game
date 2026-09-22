@@ -1,0 +1,4 @@
+/* Name under the app icon + permission prompts for English (also the fallback for unlisted languages) */
+"CFBundleDisplayName" = "Faith Choice";
+"NSMicrophoneUsageDescription" = "The microphone is used only if you tap the voice input button yourself when submitting your own story of faith, so you can dictate the text instead of typing it.";
+"NSSpeechRecognitionUsageDescription" = "Speech recognition is used only for voice input in the story submission form, to turn what you dictate into text.";

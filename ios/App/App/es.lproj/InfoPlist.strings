@@ -1,0 +1,4 @@
+/* "Historias reales" (i18n.js) is 16 characters and would be truncated under the icon, so the icon keeps "Faith Choice" */
+"CFBundleDisplayName" = "Faith Choice";
+"NSMicrophoneUsageDescription" = "El micrófono solo se usa si tú mismo pulsas el botón de entrada por voz al enviar tu historia de fe, para dictar el texto en lugar de escribirlo.";
+"NSSpeechRecognitionUsageDescription" = "El reconocimiento de voz solo se usa para la entrada por voz en el formulario de envío de tu historia, para convertir lo que dictas en texto.";
